@@ -191,6 +191,9 @@ public:
     QH5Dataset(const QH5Dataset& g) : QH5id(g) {}
     ~QH5Dataset() {}
 
+    QH5Dataset& operator=(const QH5Dataset& o)
+    { *((QH5id*)this) = o; return *this; }
+
     QH5Datatype datatype() const;
     QH5Dataspace dataspace() const;
 
@@ -292,7 +295,9 @@ public:
     template<typename T>
     bool write(const char *name, const T& data) const
     {
-        QH5Dataset ds = createDataset(name, TypeTraits<T>::dataspace(data),
+        QH5Dataset ds;
+        if (exists(name) && isDataset(name)) ds = openDataset(name);
+        else ds = createDataset(name, TypeTraits<T>::dataspace(data),
                                       QH5Datatype::fromValue(data));
         return ds.isValid() ? ds.write(data) : false;
     }
