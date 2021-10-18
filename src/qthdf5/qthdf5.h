@@ -11,6 +11,7 @@
 class QH5Datatype;
 class QH5Group;
 class QH5Dataset;
+class QH5File;
 
 class HDF_EXPORT QH5id
 {
@@ -40,8 +41,17 @@ protected:
     int refcount() const;
 };
 
-HDF_EXPORT bool operator==(const QH5id &lhs, const QH5id &rhs);
-HDF_EXPORT bool operator!=(const QH5id &lhs, const QH5id &rhs);
+HDF_EXPORT
+inline bool operator==(const QH5id &lhs, const QH5id &rhs)
+{
+  if ((!rhs.isValid()) || (!lhs.isValid())) return false;
+  return lhs.id() == rhs.id();
+}
+HDF_EXPORT
+inline bool operator!=(const QH5id &lhs, const QH5id &rhs)
+{
+  return !(lhs==rhs);
+}
 
 class QH5Dataspace : public QH5id
 {
@@ -208,8 +218,6 @@ public:
         return read_(TypeTraits<T>::ptr(data),ds, datatype);
     }
 
-
-
 private:
     bool write_(const void* data, const QH5Dataspace& memspace,
                const QH5Datatype& memtype) const;
@@ -258,8 +266,6 @@ inline bool QH5Dataset::write<QStringList>(const QStringList& data, const QH5Dat
 {
     return write_(data, memspace, memtype);
 };
-
-class QH5File;
 
 class QH5Group : public QH5id
 {

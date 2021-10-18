@@ -138,16 +138,7 @@ int QH5id::refcount() const
     return H5Iget_ref(_h(id_));
 }
 
-bool operator==(const QH5id &lhs, const QH5id &rhs)
-{
-  if ((!rhs.isValid()) || (!lhs.isValid())) return false;
-  return lhs.id() == rhs.id();
-}
 
-bool operator!=(const QH5id &lhs, const QH5id &rhs)
-{
-  return !(lhs==rhs);
-}
 /************* DATASPACE **************/
 QH5Dataspace::QH5Dataspace(const QVector<quint64>& dims)
 {
