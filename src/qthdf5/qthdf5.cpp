@@ -552,16 +552,6 @@ bool QH5File::open(QIODevice::OpenMode mode)
 
     bool bExists = QFile::exists(fname_);
 
-    if (bExists && mode.testFlag(QIODevice::NewOnly)) {
-        error_msg_ = QString("The file '%1' already exists.").arg(fname_);
-        return false;
-    }
-
-    if (!bExists && mode.testFlag(QIODevice::ExistingOnly)) {
-        error_msg_ = QString("The file '%1' does not exist.").arg(fname_);
-        return false;
-    }
-
     hid_t fid;
     if ( !bExists || (bExists && mode.testFlag(QIODevice::Truncate)))
         fid = H5Fcreate (fname_.toLatin1(),
