@@ -582,15 +582,17 @@ bool QH5Group::exists(const char *name) const
 bool QH5Group::isDataset(const char *name) const
 {
     if (!exists(name)) return false;
-    H5O_info_t info;
-    H5Oget_info_by_name(_h(id_),name,&info,0);
+    // use compatibility function for HDF5 <= 1.10
+    H5O_info1_t info;
+    H5Oget_info_by_name1(_h(id_),name,&info,0);
     return info.type == H5O_TYPE_DATASET;
 }
 bool QH5Group::isGroup(const char *name) const
 {
     if (!exists(name)) return false;
-    H5O_info_t info;
-    H5Oget_info_by_name(_h(id_),name,&info,0);
+    // use compatibility function for HDF5 <= 1.10
+    H5O_info1_t info;
+    H5Oget_info_by_name1(_h(id_),name,&info,0);
     return info.type == H5O_TYPE_GROUP;
 };
 QH5Group QH5Group::createGroup(const char *name) const
