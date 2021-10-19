@@ -583,16 +583,28 @@ bool QH5Group::isDataset(const char *name) const
 {
     if (!exists(name)) return false;
     // use compatibility function for HDF5 <= 1.10
+#if H5_VERSION_GE(1,12,0)
     H5O_info1_t info;
     H5Oget_info_by_name1(_h(id_),name,&info,0);
+#else
+    H5O_info_t info;
+    H5Oget_info_by_name(_h(id_),name,&info,0);
+#endif
     return info.type == H5O_TYPE_DATASET;
 }
 bool QH5Group::isGroup(const char *name) const
 {
     if (!exists(name)) return false;
+
     // use compatibility function for HDF5 <= 1.10
+#if H5_VERSION_GE(1,12,0)
     H5O_info1_t info;
     H5Oget_info_by_name1(_h(id_),name,&info,0);
+#else
+    H5O_info_t info;
+    H5Oget_info_by_name(_h(id_),name,&info,0);
+#endif
+
     return info.type == H5O_TYPE_GROUP;
 };
 QH5Group QH5Group::createGroup(const char *name) const
