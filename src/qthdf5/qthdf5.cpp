@@ -568,14 +568,39 @@ bool QH5Group::isGroup(const char *name) const
 
     return info.type == H5O_TYPE_GROUP;
 };
-QH5Group QH5Group::createGroup(const char *name) const
+bool QH5Group::isCreationOrderIdx() const
+{
+    if (!isValid()) return false;
+    unsigned crt_order_flags = 0;
+
+    hid_t gcplid = H5Gget_create_plist (_h(id_));
+    if (gcplid < 0) throw h5exception("H5Gget_create_plist");
+    herr_t status = H5Pget_link_creation_order(gcplid, &crt_order_flags);
+    H5Pclose(gcplid);
+    return crt_order_flags == (H5P_CRT_ORDER_TRACKED | H5P_CRT_ORDER_INDEXED);
+}
+QH5Group QH5Group::createGroup(const char *name, bool idxCreationOrder) const
 {
     if (exists(name)) {
         // error
         return QH5Group();
     }
-    hid_t gid = H5Gcreate(_h(id_), name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    if (gid < 0) throw h5exception("Error in call to H5Gcreate");
+    hid_t gid;
+    if (idxCreationOrder) {
+        hid_t group_creation_plist = H5Pcreate(H5P_GROUP_CREATE);
+        herr_t status = H5Pset_link_creation_order(group_creation_plist,
+                                         H5P_CRT_ORDER_TRACKED | H5P_CRT_ORDER_INDEXED);
+        if (status<0) throw h5exception("Error in call to H5Pset_link_creation_order");
+        gid = H5Gcreate(_h(id_), name,
+                        H5P_DEFAULT, group_creation_plist, H5P_DEFAULT);
+        if (gid < 0) throw h5exception("Error in call to H5Gcreate");
+        H5Pclose(group_creation_plist);
+    }
+    else {
+        gid = H5Gcreate(_h(id_), name,
+                        H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        if (gid < 0) throw h5exception("Error in call to H5Gcreate");
+    }
 
     return QH5Group(static_cast<QH5id::h5id>(gid), false);
 }
@@ -616,16 +641,17 @@ QH5Dataset QH5Group::openDataset(const char *name) const
 
     return QH5Dataset(static_cast<QH5id::h5id>(dsid), false);
 }
-QVector<QH5Group> QH5Group::subGroups() const
+QVector<QH5Group> QH5Group::subGroups(bool idxCreationOrder) const
 {
     QVector<QH5Group> groups;
+    bool crtord = idxCreationOrder ? isCreationOrderIdx() : false;
     hsize_t n;
     H5Gget_num_objs(_h(id_),&n);
     for(hsize_t i=0; i<n; ++i)
     {
-        H5G_obj_t typ = H5Gget_objtype_by_idx(_h(id_),i);
-        if (typ==H5G_GROUP)
-            groups.push_back(openGroup(objname_by_idx(i)));
+        QByteArray name = objname_by_idx(i,crtord);
+        if (isGroup(name))
+            groups.push_back(openGroup(name));
     }
     return groups;
 }
@@ -636,20 +662,23 @@ QVector<QH5Dataset> QH5Group::datasets() const
     H5Gget_num_objs(_h(id_),&n);
     for(hsize_t i=0; i<n; ++i)
     {
-        H5G_obj_t typ = H5Gget_objtype_by_idx(_h(id_),i);
-        if (typ==H5G_DATASET) ds.push_back(openDataset(objname_by_idx(i)));
+        QByteArray name = objname_by_idx(i,false);
+        if (isDataset(name))
+            ds.push_back(openDataset(name));
     }
     return ds;
 }
-QByteArrayList QH5Group::groupNames() const
+QByteArrayList QH5Group::groupNames(bool idxCreationOrder) const
 {
     QByteArrayList names;
+    bool crtord = idxCreationOrder ? isCreationOrderIdx() : false;
     hsize_t n;
     H5Gget_num_objs(_h(id_),&n);
     for(hsize_t i=0; i<n; ++i)
     {
-        H5G_obj_t typ = H5Gget_objtype_by_idx(_h(id_),i);
-        if (typ==H5G_GROUP) names.push_back(objname_by_idx(i));
+        QByteArray name = objname_by_idx(i,crtord);
+        if (isGroup(name))
+            names.push_back(name);
     }
     return names;
 }
@@ -661,20 +690,29 @@ QByteArrayList QH5Group::datasetNames() const
     H5Gget_num_objs(_h(id_),&n);
     for(hsize_t i=0; i<n; ++i)
     {
-        H5G_obj_t typ = H5Gget_objtype_by_idx(_h(id_),i);
-        if (typ==H5G_DATASET) names.push_back(objname_by_idx(i));
+        QByteArray name = objname_by_idx(i,false);
+        if (isDataset(name)) names.push_back(name);
     }
     return names;
 }
 
-QByteArray QH5Group::objname_by_idx(int i) const
+QByteArray QH5Group::objname_by_idx(int i, bool idxCreationOrder) const
 {
     QByteArray name;
-    ssize_t sz = H5Gget_objname_by_idx(_h(id_),i,NULL,0);
+//    ssize_t sz = H5Gget_objname_by_idx(_h(id_),i,NULL,0);
+//    if (sz) {
+//        name.resize(sz);
+//        H5Gget_objname_by_idx(_h(id_),i,name.data(),sz+1);
+//    }
+    H5_index_t idx = idxCreationOrder ? H5_INDEX_CRT_ORDER : H5_INDEX_NAME;
+    ssize_t sz = H5Lget_name_by_idx(_h(id_), ".",
+                                    idx, H5_ITER_INC,i, NULL, 0, 0);
     if (sz) {
         name.resize(sz);
-        H5Gget_objname_by_idx(_h(id_),i,name.data(),sz+1);
+        H5Lget_name_by_idx(_h(id_), ".",idx,H5_ITER_INC,
+                           i, name.data(), sz+1, 0);
     }
+
     return name;
 }
 

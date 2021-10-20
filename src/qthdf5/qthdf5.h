@@ -287,8 +287,9 @@ public:
     bool isDataset(const char *name) const;
     bool isGroup(const char *name) const;
 
-    QH5Group createGroup(const char *name) const;
+    QH5Group createGroup(const char *name, bool idxCreationOrder = false) const;
     QH5Group openGroup(const char *name) const;
+    bool isCreationOrderIdx() const;
 
     QH5Dataset createDataset(const char *name,
                              const QH5Dataspace& memspace,
@@ -311,14 +312,14 @@ public:
         return ds.isValid() ? ds.read(data) : false;
     }
 
-    QVector<QH5Group> subGroups() const;
+    QVector<QH5Group> subGroups(bool idxCreationOrder = false) const;
     QVector<QH5Dataset> datasets() const;
 
-    QByteArrayList groupNames() const;
+    QByteArrayList groupNames(bool idxCreationOrder = false) const;
     QByteArrayList datasetNames() const;
 
 private:
-    QByteArray objname_by_idx(int i) const;
+    QByteArray objname_by_idx(int i, bool idxCreationOrder) const;
 
 };
 

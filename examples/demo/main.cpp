@@ -9,21 +9,25 @@ int main()
 {
     QH5File h5f("TEST.H5");
 
+    bool creation_order = true;
+
     // create the file
     if (h5f.open(QIODevice::Truncate))
     {
         // get the root group
         QH5Group root = h5f.root();
         // write an int
-        root.write("A",1);
+        root.write("B",1);
         // write some UTF8 strings
         QStringList L;
         L << QString("Γιώργος") << QString("Γιάννης");
-        root.write("B",L);
+        root.write("A",L);
         // create some groups / sub-groups
-        QH5Group g1 = root.createGroup("G1");
-        QH5Group g2 = root.createGroup("G2");
-        QH5Group g3 = g2.createGroup("G3");
+        QH5Group g0 = root.createGroup("G0",creation_order);
+        QH5Group g2 = g0.createGroup("G2",creation_order);
+        QH5Group g1 = g0.createGroup("G1",creation_order);
+        QH5Group g3 = g2.createGroup("G3",creation_order);
+        QH5Group g4 = g2.createGroup("G4",creation_order);
         // write a char array
         g3.write("B",QVector<char>({1,2,3}));
         // close the file
@@ -65,6 +69,8 @@ void list(const QH5Group& g, int level)
             qDebug() << "Unckown datatype";
         }
     }
-    foreach(const QH5Group& s, g.subGroups())
+    //bool isNoRoot = g.name()!="/";
+    //isRoot = false;
+    foreach(const QH5Group& s, g.subGroups(true))
         list(s, level + 1);
 }
