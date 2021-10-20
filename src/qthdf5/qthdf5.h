@@ -6,6 +6,8 @@
 #include <QMetaType>
 #include <QFile>
 
+#include <exception>
+
 #define HDF_EXPORT
 
 class QH5Datatype;
@@ -36,6 +38,7 @@ public:
 
 protected:
     h5id id_;
+
     bool ref() const;
     bool deref() const;
     int refcount() const;
@@ -321,6 +324,8 @@ private:
 
 class QH5File
 {
+    friend class QH5id;
+
     QString fname_;
     QString error_msg_;
     QH5id id_;
@@ -343,6 +348,16 @@ public:
 
     static bool isHDF5(const QString& fname);
 
+private:
+    void pushError(const QString& err) { error_msg_ = err; }
+
+};
+
+class HDF_EXPORT h5exception : public std::runtime_error
+{
+public:
+    h5exception(const char* msg) : std::runtime_error(msg)
+    {}
 };
 
 #endif // QH5ID_H

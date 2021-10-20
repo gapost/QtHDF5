@@ -21,13 +21,8 @@ QH5id& QH5id::operator=(const QH5id& o)
 {
     if (this == &o) return *this;
 
-    if (isValid() && !close()) {
-        // error closing
-    }
-
-    if (o.isValid() && !o.ref()) {
-        // error ref
-    }
+    if (isValid()) close();
+    if (o.isValid()) o.ref();
 
     id_ = o.id_;
 
@@ -76,14 +71,12 @@ bool QH5id::close()
             error_code = H5Oclose(_h(id_));
         }
 
+        id_ = 0;
         if (error_code < 0) {
-            // register error
-            id_ = 0;
+            throw h5exception("Error closing H5 id");
             return false;
-        } else {
-            id_ = 0;
-            return true;
-        }
+        } else return true;
+
     }
     return false;
 }
@@ -95,6 +88,7 @@ bool QH5id::isValid() const
     htri_t ret = H5Iis_valid(_h(id_));
 
     //  ret=0 -> invalid, (ret < 0) -> error
+    if (ret<0) throw h5exception("Error calling H5Iis_valid");
 
     return (ret>0);
 }
@@ -176,10 +170,7 @@ QVector<quint64> QH5Dataspace::dimensions() const
 int QH5Dataspace::size() const
 {
     hssize_t s = H5Sget_simple_extent_npoints(_h(id_));
-    if (s < 0) {
-        // error
-        return 0;
-    }
+    if (s < 0) throw h5exception("H5Sget_simple_extent_npoints failed");
     return s;
 }
 /************* DATATYPE ***************/
@@ -235,7 +226,7 @@ int QH5Datatype::metaTypeId() const
 
     hid_t id = H5Tget_native_type(_h(id_), H5T_DIR_ASCEND);
     if (id < 0) {
-        // error
+        throw h5exception("Error in call to H5Tget_native_type");
         return QMetaType::UnknownType;
     }
     if (id == H5T_NATIVE_CHAR)          return QMetaType::Char;
@@ -277,20 +268,12 @@ bool QH5Datatype::getStringTraits(StringEncoding& enc, size_t& sz) const
     if (getClass()!=QH5Datatype::STRING) return false;
     {
         H5T_cset_t ret = H5Tget_cset(_h(id_));
-        if (ret<0)
-        {
-            // error
-            return false;
-        }
+        if (ret<0) throw h5exception("Error in call to H5Tget_cset");
         enc = (ret==H5T_CSET_ASCII) ? ASCII : UTF8;
     }
     {
         htri_t ret = H5Tis_variable_str(_h(id_));
-        if (ret <0)
-        {
-            // error
-            return false;
-        }
+        if (ret <0) throw h5exception("Error in call to H5Tis_variable_str");
         sz = (0 != ret) ? H5T_VARIABLE : size();
     }
 
@@ -303,27 +286,17 @@ bool QH5Datatype::setStringTraits(StringEncoding enc, size_t sz) const
 
     herr_t ret = H5Tset_cset(_h(id_),
                              enc==ASCII ? H5T_CSET_ASCII : H5T_CSET_UTF8);
-    if (ret<0)
-    {
-        // error
-        return false;
-    }
+    if (ret<0) throw h5exception("Error in call to H5Tset_cset");
 
     ret = H5Tset_size(_h(id_), sz );
-    if (ret <0)
-    {
-        // error
-        return false;
-    }
+    if (ret <0) throw h5exception("Error in call to H5Tset_size");
 
     return true;
 }
 size_t QH5Datatype::size() const
 {
     size_t s = H5Tget_size(_h(id_));
-    if (s == 0) {
-        // error
-    }
+    if (s == 0) throw h5exception("H5Tget_size returns 0");
     return s;
 }
 QH5Datatype QH5Datatype::fixedString(int size)
@@ -338,8 +311,12 @@ bool QH5Dataset::write_(const void* data, const QH5Dataspace& memspace,
 {
     if (!data || !memspace.isValid() || !memtype.isValid()) return false;
 
-    return H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
-                     H5S_ALL, H5P_DEFAULT, data) >= 0;
+    herr_t ret = H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
+                     H5S_ALL, H5P_DEFAULT, data);
+
+    if (ret<0) throw h5exception("Error in call to H5Dwrite");
+
+    return ret >= 0;
 }
 bool QH5Dataset::write_(const QString& str) const
 {
@@ -352,15 +329,12 @@ bool QH5Dataset::write_(const QString &str, const QH5Dataspace &memspace, const 
     QH5Datatype::StringEncoding enc;
     memtype.getStringTraits(enc,sz);
     QByteArray buff = (enc==QH5Datatype::ASCII) ? str.toLatin1() : str.toUtf8();
+    herr_t ret;
     if (sz==H5T_VARIABLE) {
         char* p[1] = { buff.data() };
-        herr_t ret = H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
+        ret = H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
                          H5S_ALL, H5P_DEFAULT, p);
-        if (ret < 0) {
-            // error
-            return false;
-        }
-        return true;
+
     } else {
         if (buff.size()+1>(int)sz) {
             // error: string too large for dataset
@@ -370,9 +344,11 @@ bool QH5Dataset::write_(const QString &str, const QH5Dataspace &memspace, const 
             int n = sz - buff.size() - 1;
             buff.append(n,'\0');
         }
-        return H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
-                         H5S_ALL, H5P_DEFAULT, buff.constData()) >= 0;
+        ret = H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
+                         H5S_ALL, H5P_DEFAULT, buff.constData());
     }
+    if (ret < 0) throw h5exception("Error in call to H5Dwrite");
+    return true;
 
 }
 bool QH5Dataset::write_(const QStringList& str) const
@@ -385,7 +361,7 @@ bool QH5Dataset::write_(const QStringList& str, const QH5Dataspace &memspace, co
     size_t sz;
     QH5Datatype::StringEncoding enc;
     memtype.getStringTraits(enc,sz);
-
+    herr_t ret;
     if (sz==H5T_VARIABLE) {
         QVector<char*> vbuff(str.size());
         QByteArrayList ba;
@@ -394,13 +370,8 @@ bool QH5Dataset::write_(const QStringList& str, const QH5Dataspace &memspace, co
             ba.push_back((enc==QH5Datatype::ASCII) ? s.toLatin1() : s.toUtf8());
             vbuff[i++] = ba.last().data();
         }
-        herr_t ret = H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
+        ret = H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
                          H5S_ALL, H5P_DEFAULT, vbuff.data());
-        if (ret < 0) {
-            // error
-            return false;
-        }
-        return true;
 
     } else {
         QByteArray buff((int)sz*str.size(),'\0');
@@ -414,17 +385,22 @@ bool QH5Dataset::write_(const QStringList& str, const QH5Dataspace &memspace, co
             memcpy(p, ba.constData(), ba.size());
             p += sz;
         }
-        return H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
-                         H5S_ALL, H5P_DEFAULT, buff.constData()) >= 0;
+        ret = H5Dwrite (_h(id_), _h(memtype.id()), _h(memspace.id()),
+                         H5S_ALL, H5P_DEFAULT, buff.constData());
     }
+    if (ret < 0) throw h5exception("Error in call to H5Dwrite");
+    return true;
 }
 bool QH5Dataset::read_(void* data, const QH5Dataspace &memspace,
                       const QH5Datatype& memtype) const
 {
     if (!data || !memspace.isValid() || !memtype.isValid()) return false;
 
-    return H5Dread (_h(id_), _h(memtype.id()), _h(memspace.id()),
-                    H5S_ALL, H5P_DEFAULT, data) >= 0;
+    herr_t ret = H5Dread (_h(id_), _h(memtype.id()), _h(memspace.id()),
+                    H5S_ALL, H5P_DEFAULT, data);
+
+    if (ret < 0) throw h5exception("Error in call to H5Dread");
+    return true;
 }
 bool QH5Dataset::read_(QString& str) const
 {
@@ -439,30 +415,25 @@ bool QH5Dataset::read_(QString& str) const
         char* p;
         herr_t ret =  H5Dread (_h(id_), _h(filetype.id()), _h(memspace.id()),
                          H5S_ALL, H5P_DEFAULT, &p) >= 0;
-        if (ret < 0) {
-            //error
-            return false;
-        }
+        if (ret < 0) throw h5exception("Error in call to H5Dread");
         str = (enc==QH5Datatype::ASCII) ? QString::fromLatin1(p) :
                                           QString::fromUtf8(p);
         ret = H5Dvlen_reclaim (_h(filetype.id()), _h(memspace.id()), H5P_DEFAULT, &p);
-        if (ret < 0) {
-            // error
-        }
-        return true;
+        if (ret < 0) throw h5exception("Error in call to H5Dvlen_reclaim");
+
     } else {
         QByteArray buff(sz,'\0');
-        return H5Dread (_h(id_), _h(filetype.id()), _h(memspace.id()),
-                         H5S_ALL, H5P_DEFAULT, buff.data()) >= 0;
+        herr_t ret =  H5Dread (_h(id_), _h(filetype.id()), _h(memspace.id()),
+                         H5S_ALL, H5P_DEFAULT, buff.data());
+        if (ret < 0) throw h5exception("Error in call to H5Dread");
     }
-
+    return true;
 }
 bool QH5Dataset::read_(QStringList& str) const
 {
     QH5Dataspace ds = dataspace();
     QVector<quint64> dims = ds.dimensions();
     if (dims.size()>1) {
-        // error
         return false;
     }
     int n = dims[0];
@@ -475,30 +446,21 @@ bool QH5Dataset::read_(QStringList& str) const
     if (sz==H5T_VARIABLE) {
         QVector<char*> p(n);
         herr_t ret =  H5Dread (_h(id_), _h(filetype.id()), _h(ds.id()),
-                         H5S_ALL, H5P_DEFAULT, p.data()) >= 0;
-        if (ret < 0) {
-            //error
-            return false;
-        }
+                         H5S_ALL, H5P_DEFAULT, p.data());
+        if (ret < 0) throw h5exception("Error in call to H5Dread");
         for(int i = 0; i<n; i++) {
             QString s = (enc==QH5Datatype::ASCII) ? QString::fromLatin1(p[i]) :
                                                     QString::fromUtf8(p[i]);
             str.push_back(s);
         }
         ret = H5Dvlen_reclaim (_h(filetype.id()), _h(ds.id()), H5P_DEFAULT, p.data());
-        if (ret < 0) {
-            // error
-        }
-        return true;
+        if (ret < 0) throw h5exception("Error in call to H5Dvlen_reclaim");
     } else {
         QByteArray buff((int)sz*n,'\0');
 
         herr_t ret = H5Dread (_h(id_), _h(filetype.id()), _h(ds.id()),
                          H5S_ALL, H5P_DEFAULT, buff.data());
-        if (ret < 0) {
-            // error
-            return false;
-        }
+        if (ret < 0) throw h5exception("Error in call to H5Dread");
 
         const char* p = buff.data();
         for(int i=0; i<n; i++) {
@@ -507,23 +469,19 @@ bool QH5Dataset::read_(QStringList& str) const
             str.push_back(s);
             p += sz;
         }
-        return true;
     }
+    return true;
 }
 QH5Datatype QH5Dataset::datatype() const
 {
     hid_t id = H5Dget_type(_h(id_));
-    if(id<0) {
-        // error
-    }
+    if (id < 0) throw h5exception("Error in call to H5Dget_type");
     return QH5Datatype(static_cast<h5id>(id),false);
 }
 QH5Dataspace QH5Dataset::dataspace() const
 {
     hid_t id = H5Dget_space(_h(id_));
-    if(id<0) {
-        // error
-    }
+    if (id < 0) throw h5exception("Error in call to H5Dget_type");
     return QH5Dataspace(static_cast<h5id>(id),false);
 }
 /*********** FILE ************/
@@ -539,7 +497,10 @@ bool QH5File::open(QIODevice::OpenMode mode)
         return false;
     }
 
-    if (fname_.isEmpty()) return false;
+    if (fname_.isEmpty()) {
+        error_msg_ = QString("File name is empty");
+        return false;
+    }
 
     bool bExists = QFile::exists(fname_);
 
@@ -614,9 +575,8 @@ QH5Group QH5Group::createGroup(const char *name) const
         return QH5Group();
     }
     hid_t gid = H5Gcreate(_h(id_), name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    if (gid < 0) {
-        // error
-    }
+    if (gid < 0) throw h5exception("Error in call to H5Gcreate");
+
     return QH5Group(static_cast<QH5id::h5id>(gid), false);
 }
 QH5Group QH5Group::openGroup(const char *name) const
@@ -626,9 +586,8 @@ QH5Group QH5Group::openGroup(const char *name) const
         return QH5Group();
     }
     hid_t gid = H5Gopen(_h(id_), name, H5P_DEFAULT);
-    if (gid < 0) {
-        // error
-    }
+    if (gid < 0) throw h5exception("Error in call to H5Gopen");
+
     return QH5Group(static_cast<QH5id::h5id>(gid), false);
 }
 QH5Dataset QH5Group::createDataset(const char *name,
@@ -642,10 +601,8 @@ QH5Dataset QH5Group::createDataset(const char *name,
     hid_t dsid = H5Dcreate (_h(id_), name,
                             _h(datatype.id()), _h(memspace.id()),
                             H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    if (dsid < 0) {
-        // error
-        return QH5Dataset();
-    }
+    if (dsid < 0) throw h5exception("Error in call to H5Dcreate");
+
     return QH5Dataset(static_cast<QH5id::h5id>(dsid), false);
 }
 QH5Dataset QH5Group::openDataset(const char *name) const
@@ -655,9 +612,8 @@ QH5Dataset QH5Group::openDataset(const char *name) const
         return QH5Dataset();
     }
     hid_t dsid = H5Dopen(_h(id_), name, H5P_DEFAULT);
-    if (dsid < 0) {
-        // error
-    }
+    if (dsid < 0) throw h5exception("Error in call to H5Dopen");
+
     return QH5Dataset(static_cast<QH5id::h5id>(dsid), false);
 }
 QVector<QH5Group> QH5Group::subGroups() const
