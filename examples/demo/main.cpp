@@ -11,6 +11,8 @@ int main()
 
     bool creation_order = true;
 
+    try {
+
     // create the file
     if (h5f.open(QIODevice::Truncate))
     {
@@ -24,6 +26,8 @@ int main()
         root.write("A",L);
         // create some groups / sub-groups
         QH5Group g0 = root.createGroup("G0",creation_order);
+        g0.writeAttribute("name",QString("G0"));
+        g0.writeAttribute("version",3);
         QH5Group g2 = g0.createGroup("G2",creation_order);
         QH5Group g1 = g0.createGroup("G1",creation_order);
         QH5Group g3 = g2.createGroup("G3",creation_order);
@@ -32,6 +36,13 @@ int main()
         g3.write("B",QVector<char>({1,2,3}));
         // close the file
         h5f.close();
+    }
+
+    }
+    catch (const h5exception& e)
+    {
+        qDebug() << e.what();
+        return -1;
     }
 
     // open the file and list contents
@@ -44,12 +55,37 @@ int main()
     return 0;
 }
 
-void list(const QH5Group& g, int level)
+void listAttributes(const QH5Node& n, int level)
 {
-    qDebug() << g.name();
+    foreach(const QByteArray& name, n.attributeNames()) {
+        QH5Datatype dt = n.attributeType(name);
+        QH5Datatype::Class cls = dt.getClass();
+        if (cls==QH5Datatype::FLOAT) {
+            double v;
+            n.readAttribute(name,v);
+            qDebug() << "  Attribute" << name << "=" << v;
+        } else if (cls==QH5Datatype::INTEGER) {
+            int v;
+            n.readAttribute(name,v);
+            qDebug() << "  Attribute" << name << "=" << v;
+        } else if (cls==QH5Datatype::STRING) {
+            QString v;
+            n.readAttribute(name,v);
+            qDebug() << "  Attribute" << name << "=" << v;
+        }
+        else {
+            qDebug() << "  Attribute" << name << ": Uncknown datatype";
+        }
+    }
+}
+
+
+void listDatasets(const QH5Group& g, int level)
+{
     foreach(const QByteArray& name, g.datasetNames()) {
         qDebug() << "Dataset " << name;
         QH5Dataset ds = g.openDataset(name);
+        listAttributes(ds,level);
         QH5Datatype dt = ds.datatype();
         QH5Datatype::Class cls = dt.getClass();
         if (cls==QH5Datatype::FLOAT) {
@@ -69,8 +105,14 @@ void list(const QH5Group& g, int level)
             qDebug() << "Unckown datatype";
         }
     }
-    //bool isNoRoot = g.name()!="/";
-    //isRoot = false;
+}
+
+void list(const QH5Group& g, int level)
+{
+    qDebug() << g.name();
+    listAttributes(g,level);
+    listDatasets(g,level);
+
     foreach(const QH5Group& s, g.subGroups(true))
         list(s, level + 1);
 }

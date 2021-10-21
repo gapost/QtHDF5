@@ -144,6 +144,10 @@ QH5Dataspace::QH5Dataspace(const QVector<quint64>& dims)
         id_ = static_cast<h5id>(space_id);
     }
 }
+QH5Dataspace QH5Dataspace::scalar()
+{
+    return QH5Dataspace(static_cast<h5id>(H5Screate(H5S_SCALAR)),false);
+}
 QVector<quint64> QH5Dataspace::dimensions() const
 {
     QVector<quint64> dims;
@@ -305,6 +309,119 @@ QH5Datatype QH5Datatype::fixedString(int size)
     datatype.setStringTraits(UTF8,size);
     return datatype;
 }
+/*********** NODE ***************/
+bool QH5Node::hasAttribute(const char* name) const
+{
+    htri_t ret = H5Aexists_by_name(_h(id_),".",name,H5P_DEFAULT);
+    if (ret < 0) throw h5exception("H5Aexists_by_name");
+    return (ret > 0);
+}
+QH5Datatype QH5Node::attributeType(const char* name) const
+{
+    QH5id attr = openAttribute_(name,QH5Datatype(),false);
+    if (! attr.id()) return QH5Datatype();
+    return QH5Datatype(H5Aget_type (attr.id()), false);
+}
+QByteArrayList QH5Node::attributeNames() const
+{
+    QByteArrayList names;
+    hsize_t n = H5Aget_num_attrs(_h(id_));
+    for(hsize_t i=0; i<n; ++i)
+    {
+        ssize_t sz = H5Aget_name_by_idx(_h(id_), ".",
+                                        H5_INDEX_NAME, H5_ITER_INC,
+                                        i, NULL, 0, 0);
+        QByteArray name;
+        if (sz) {
+            name.resize(sz);
+            H5Aget_name_by_idx(_h(id_), ".",
+                               H5_INDEX_NAME,H5_ITER_INC,
+                               i, name.data(), sz+1, 0);
+        }
+        names.push_back(name);
+    }
+    return names;
+}
+bool QH5Node::readAttribute_(const char* name, void* data,
+                      const QH5Datatype& memtype) const
+{
+    if (!data || !memtype.isValid()) return false;
+
+    QH5id attr = openAttribute_(name,memtype,false);
+    if (attr.id()) {
+        herr_t ret = H5Aread(_h(attr.id()), _h(memtype.id()), data);
+        if (ret < 0) throw h5exception("Error in call to H5Aread");
+        return (ret > 0);
+    } else return false;
+}
+bool QH5Node::readAttribute_(const char* name, QString& str) const
+{
+    QH5Dataspace memspace = QH5Dataspace::scalar();
+    QH5id attr = openAttribute_(name,QH5Datatype(),false);
+    if (! attr.id()) return false;
+    QH5Datatype filetype(H5Aget_type (attr.id()), false);
+    if (!filetype.isValid() || filetype.getClass() != QH5Datatype::STRING) return false;
+    size_t sz;
+    QH5Datatype::StringEncoding enc;
+    filetype.getStringTraits(enc,sz);
+
+    if (sz==H5T_VARIABLE) {
+        char* p;
+        herr_t ret = H5Aread(_h(attr.id()), _h(filetype.id()), &p);
+        if (ret < 0) throw h5exception("Error in call to H5Aread");
+        str = (enc==QH5Datatype::ASCII) ? QString::fromLatin1(p) :
+                                          QString::fromUtf8(p);
+        ret = H5Dvlen_reclaim (_h(filetype.id()), _h(memspace.id()), H5P_DEFAULT, &p);
+        if (ret < 0) throw h5exception("Error in call to H5Dvlen_reclaim");
+
+    } else {
+        QByteArray buff(sz,'\0');
+        herr_t ret = H5Aread(_h(attr.id()), _h(filetype.id()), buff.data());
+        if (ret < 0) throw h5exception("H5Aread");
+        str = (enc==QH5Datatype::ASCII) ? QString::fromLatin1(buff) :
+                                          QString::fromUtf8(buff);
+    }
+    return true;
+}
+bool QH5Node::writeAttribute_(const char* name, const void* data,
+                       const QH5Datatype& memtype) const
+{
+    if (!data || !memtype.isValid()) return false;
+
+    QH5id attr = openAttribute_(name,memtype,true);
+    if (attr.id()) {
+        herr_t ret = H5Awrite (_h(attr.id()), _h(memtype.id()), data);
+        if (ret < 0) throw h5exception("Error in call to H5Awrite");
+        return (ret > 0);
+    } else return false;
+}
+bool QH5Node::writeAttribute_(const char* name, const QString &str) const
+{
+    QH5Datatype memtype = QH5Datatype::fromValue(str); // UTF8, variable length
+    QH5id attr = openAttribute_(name,memtype,true);
+    if (attr.id()) {
+        QByteArray buff = str.toUtf8();
+        char* p[1] = { buff.data() };
+        herr_t ret = H5Awrite (_h(attr.id()), _h(memtype.id()), p);
+        if (ret < 0) throw h5exception("Error in call to H5Awrite");
+        return (ret > 0);
+    } else return false;
+}
+QH5id QH5Node::openAttribute_(const char* name, const QH5Datatype& memtype, bool create) const
+{
+    hid_t attr = 0;
+    if (hasAttribute(name)) {
+        attr = H5Aopen_by_name( _h(id_), ".", name, H5P_DEFAULT, H5P_DEFAULT);
+        if (attr < 0) throw h5exception("H5Aopen_by_name");
+    } else if (create) {
+        attr = H5Acreate_by_name(_h(id_), ".", name,
+                                 _h(memtype.id()),
+                                 _h(QH5Dataspace::scalar().id()),
+                                 H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        if (attr < 0) throw h5exception("H5Acreate_by_name");
+    }
+    return QH5id(static_cast<h5id>(attr),false);
+}
 /*********** DATASET ************/
 bool QH5Dataset::write_(const void* data, const QH5Dataspace& memspace,
                        const QH5Datatype& memtype) const
@@ -426,6 +543,8 @@ bool QH5Dataset::read_(QString& str) const
         herr_t ret =  H5Dread (_h(id_), _h(filetype.id()), _h(memspace.id()),
                          H5S_ALL, H5P_DEFAULT, buff.data());
         if (ret < 0) throw h5exception("Error in call to H5Dread");
+        str = (enc==QH5Datatype::ASCII) ? QString::fromLatin1(buff) :
+                                          QString::fromUtf8(buff);
     }
     return true;
 }
@@ -575,7 +694,8 @@ bool QH5Group::isCreationOrderIdx() const
 
     hid_t gcplid = H5Gget_create_plist (_h(id_));
     if (gcplid < 0) throw h5exception("H5Gget_create_plist");
-    herr_t status = H5Pget_link_creation_order(gcplid, &crt_order_flags);
+    // herr_t status =
+            H5Pget_link_creation_order(gcplid, &crt_order_flags);
     H5Pclose(gcplid);
     return crt_order_flags == (H5P_CRT_ORDER_TRACKED | H5P_CRT_ORDER_INDEXED);
 }

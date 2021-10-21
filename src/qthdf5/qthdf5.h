@@ -74,6 +74,8 @@ public:
 
     QVector<quint64> dimensions() const;
     int size() const;
+
+    static QH5Dataspace scalar();
 };
 
 template<typename T>
@@ -143,6 +145,7 @@ public:
 class QH5Datatype : public QH5id
 {
     friend class QH5id;
+    friend class QH5Node;
     friend class QH5Group;
     friend class QH5Dataset;
     QH5Datatype(h5id id, bool incref) : QH5id(id,incref) {}
@@ -179,19 +182,67 @@ public:
     bool setStringTraits(StringEncoding enc, size_t size) const;
 
     static QH5Datatype fixedString(int size);
+
 };
 
+class QH5Node : public QH5id
+{
+    friend class QH5id;
+    friend class QH5Dataset;
+    friend class QH5Group;
+    QH5Node(h5id id, bool incref) : QH5id(id,incref) {}
+public:
+    QH5Node() : QH5id() {}
+    QH5Node(const QH5Node& n) : QH5id(n) {}
 
+    bool hasAttribute(const char* name) const;
+    QH5Datatype attributeType(const char* name) const;
+    QByteArrayList attributeNames() const;
+    template<typename T>
+    bool readAttribute(const char* name, T& value) const {
+        QH5Datatype datatype = QH5Datatype::fromValue(value);
 
-class QH5Dataset : public QH5id
+        return readAttribute_(name, TypeTraits<T>::ptr(value),
+                              QH5Datatype::fromValue(value));
+    }
+    template<typename T>
+    bool writeAttribute(const char* name, const T& value) const {
+        QH5Datatype datatype = QH5Datatype::fromValue(value);
+
+        return writeAttribute_(name, TypeTraits<T>::cptr(value),
+                              QH5Datatype::fromValue(value));
+    }
+private:
+    bool readAttribute_(const char* name, void* data,
+                        const QH5Datatype& memtype) const;
+    bool writeAttribute_(const char* name, const void* data,
+                        const QH5Datatype& memtype) const;
+    bool readAttribute_(const char* name, QString& S) const;
+    bool writeAttribute_(const char* name, const QString& S) const;
+    QH5id openAttribute_(const char* name, const QH5Datatype& memtype, bool create) const;
+};
+
+template<>
+inline bool QH5Node::readAttribute<QString>(const char* name, QString& value) const
+{
+    return readAttribute_(name, value);
+};
+
+template<>
+inline bool QH5Node::writeAttribute<QString>(const char* name, const QString& value) const
+{
+    return writeAttribute_(name, value);
+};
+
+class QH5Dataset : public QH5Node
 {
     friend class QH5id;
     friend class QH5Group;
-    QH5Dataset(h5id id, bool incref) : QH5id(id,incref) {}
+    QH5Dataset(h5id id, bool incref) : QH5Node(id,incref) {}
 
 public:
-    QH5Dataset() : QH5id() {}
-    QH5Dataset(const QH5Dataset& g) : QH5id(g) {}
+    QH5Dataset() : QH5Node() {}
+    QH5Dataset(const QH5Dataset& g) : QH5Node(g) {}
     ~QH5Dataset() {}
 
     QH5Dataset& operator=(const QH5Dataset& o)
@@ -273,14 +324,14 @@ inline bool QH5Dataset::write<QStringList>(const QStringList& data, const QH5Dat
     return write_(data, memspace, memtype);
 };
 
-class QH5Group : public QH5id
+class QH5Group : public QH5Node
 {
     friend class QH5id;
     friend class QH5File;
-    QH5Group(h5id id, bool incref) : QH5id(id,incref) {}
+    QH5Group(h5id id, bool incref) : QH5Node(id,incref) {}
 public:
-    QH5Group() : QH5id() {}
-    QH5Group(const QH5Group& g) : QH5id(g) {}
+    QH5Group() : QH5Node() {}
+    QH5Group(const QH5Group& g) : QH5Node(g) {}
     ~QH5Group() {}
 
     bool exists(const char *name) const;
