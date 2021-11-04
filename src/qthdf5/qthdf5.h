@@ -15,25 +15,113 @@ class QH5Group;
 class QH5Dataset;
 class QH5File;
 
+/**
+ * @brief A wrapper for HDF5 object identifiers 
+ * 
+ * Implements part of the H5I API.
+ * 
+ */
 class HDF_EXPORT QH5id
 {
 public:
+    /**
+     * @brief Define our type for storing id values
+     */
     typedef qint64 h5id;
+
+    /**
+     * @brief Construct a new QH5id object
+     * 
+     * 
+     * @param id HDF5 identifier
+     * @param incref If true then the reference counter is incremented
+     */
     explicit QH5id(h5id id = 0, bool incref = true);
+
+    /**
+     * @brief Copy constructor
+     * 
+     * @param o Another QH5id object
+     */
     QH5id(const QH5id& o);
+
+    /**
+     * @brief Destroy the QH5id object
+     * 
+     * Calls close().
+     * 
+     */
     ~QH5id() { close(); }
 
     QH5id& operator=(const QH5id& o);
 
+    /**
+     * @brief Check if this id is valid
+     * 
+     * Calls H5Iis_valid
+     * 
+     * @return true 
+     * @return false 
+     */
     bool isValid() const;
+
+    /**
+     * @brief Returns the stored id
+     */
     const h5id& id() const { return id_; }
+
+    /**
+     * @brief Return the name of the corresponding id
+     * 
+     * Calls H5Iget_name
+     * 
+     * @return QByteArray 
+     */
     QByteArray name() const;
 
+    /**
+     * @brief Close this id
+     * 
+     * If isValid() returns true, the type of identifier is queried
+     * with H5Iget_type and then the appropriate H5Xclose function
+     * is called.
+     * 
+     * @return true Identifier closed succesfully
+     * @return false Invalid id or error while closing id
+     */
     bool close();
 
+    /**
+     * @brief Promote to QH5Group
+     * 
+     * If the id refers to a valid HDF5 group a new QH5Group 
+     * object is created and returned.
+     * 
+     * Otherwise an invalid object is returned.
+     * 
+     * @return QH5Group 
+     */
     QH5Group toGroup() const;
+
+    /**
+     * @brief Promote to QH5Dataset
+     * 
+     * If the id refers to a valid HDF5 dataset a new QH5Dataset 
+     * object is created and returned.
+     * 
+     * Otherwise an invalid object is returned.
+     * 
+     * @return QH5Dataset 
+     */
     QH5Dataset toDataset() const;
+
+    /**
+     * @brief Return true if the id refers to a HDF5 group
+     */
     bool isGroup() const;
+    /**
+     * @brief Return true if the id refers to a HDF5 dataset
+     */
     bool isDataset() const;
 
 protected:
@@ -44,6 +132,15 @@ protected:
     int refcount() const;
 };
 
+/**
+ * @brief Return true if the 2 ids are equal.
+ * 
+ * The 2 ids must be valid and wrap the same HDF5 id.
+ * 
+ * @param lhs 
+ * @param rhs 
+ * @return HDF_EXPORT 
+ */
 HDF_EXPORT
 inline bool operator==(const QH5id &lhs, const QH5id &rhs)
 {
