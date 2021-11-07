@@ -41,6 +41,9 @@ public:
     /**
      * @brief Copy constructor
      * 
+     * o.id() is copied to the new object and the reference counter is
+     * increased.
+     * 
      * @param o Another QH5id object
      */
     QH5id(const QH5id& o);
@@ -53,7 +56,17 @@ public:
      */
     ~QH5id() { close(); }
 
-    QH5id& operator=(const QH5id& o);
+    /**
+     * @brief Assignement operator.
+     * 
+     * The current HDF5 id of this object is released and
+     * rhs.id() is copied over. 
+     * The reference counter is increased.
+     * 
+     * @param rhs 
+     * @return QH5id& 
+     */
+    QH5id& operator=(const QH5id& rhs);
 
     /**
      * @brief Check if this id is valid
@@ -153,50 +166,121 @@ inline bool operator!=(const QH5id &lhs, const QH5id &rhs)
   return !(lhs==rhs);
 }
 
-class QH5Dataspace : public QH5id
+/**
+ * @brief A wrapper for a HDF5 dataspace
+ * 
+ */
+class HDF_EXPORT QH5Dataspace : public QH5id
 {
     friend class QH5Dataset;
     QH5Dataspace(h5id id, bool incref) : QH5id(id,incref) {}
 public:
-    /*
-     * QVector<quint64>& dims:
-     *   isEmpty() : invalid dataspace
-     *   [0]       : empty dataspace H5S_NULL
-     *   [1]       : scalar H5S_SCALAR
-     *   [n,m,...] : simple H5S_SIMPLE
+
+    /**
+     * @brief Construct a new QH5Dataspace object from a dimensions vector 
+     * 
+     * The created dataspace has the following properties according to the 
+     * value of dims :
+     *      - dims.isEmpty()==true    : invalid dataspace
+     *      - dims = {0}              : empty dataspace (H5S_NULL)
+     *      - dims = {1}              : scalar dataspace (H5S_SCALAR)
+     *      - dims = {n1,n2,...}      : simple dataspace (H5S_SIMPLE), n1 x n2 x ...
+     * 
+     * @param dims A vector of dimensions
      */
     QH5Dataspace(const QVector<quint64>& dims = QVector<quint64>());
-    QH5Dataspace(const QH5Dataspace& g) : QH5id(g) {}
-    ~QH5Dataspace() {}
 
+    /**
+     * @brief Return the dimensions of the HDF5 dataspace
+     *
+     * Uses the H5S API to query the dataspace dimensions.
+     *
+     * @return The result is returned as a QVector
+     */
     QVector<quint64> dimensions() const;
+
+    /**
+     * @brief Returns the number of elements
+     *
+     * Calls H5Sget_simple_extent_npoints
+     * 
+     * @return int 
+     */
     int size() const;
 
+    /**
+     * @brief Create a scalar dataspace
+     */
     static QH5Dataspace scalar();
 };
 
-template<typename T>
-class TypeTraits {
+class HDF_EXPORT QH5Datatype : public QH5id
+{
+    friend class QH5id;
+    friend class QH5Node;
+    friend class QH5Group;
+    friend class QH5Dataset;
+
+    QH5Datatype(h5id id, bool incref) : QH5id(id,incref) {}
+    static QH5Datatype fromMetaTypeId(int i);
+
+    template<typename T>
+    class traits {
+    public:
+
+        static int metaTypeId(const T &) { return qMetaTypeId<T>(); }
+
+        static QH5Dataspace dataspace(const T &)
+        { return QVector<quint64>({1}); }
+
+        static void resize(T &, int) {}
+
+        static void *ptr(T &value) {
+            return reinterpret_cast<void *>(&value);
+        }
+
+        static const void *cptr(const T &value) {
+            return reinterpret_cast<const void *>(&value);
+        }
+    };
+
 public:
+    enum Class {
+        UNSUPPORTED,
+        INTEGER,
+        FLOAT,
+        STRING
+    };
 
-    static int metaTypeId(const T &) { return qMetaTypeId<T>(); }
+    enum StringEncoding {
+        ASCII,
+        UTF8
+    };
 
-    static QH5Dataspace dataspace(const T &)
-    { return QVector<quint64>({1}); }
+    QH5Datatype() : QH5id() {}
+    //QH5Datatype(const QH5Datatype& g) : QH5id(g) {}
+    //~QH5Datatype() {}
 
-    static void resize(T &, int) {}
-
-    static void *ptr(T &value) {
-        return reinterpret_cast<void *>(&value);
+    template<typename T>
+    static QH5Datatype fromValue(const T& v)
+    {
+        return fromMetaTypeId(traits<T>::metaTypeId(v));
     }
 
-    static const void *cptr(const T &value) {
-        return reinterpret_cast<const void *>(&value);
-    }
+    Class getClass() const;
+
+    int metaTypeId() const;
+
+    size_t size() const;
+    bool getStringTraits(StringEncoding& enc, size_t &size) const;
+    bool setStringTraits(StringEncoding enc, size_t size) const;
+
+    static QH5Datatype fixedString(int size);
+
 };
 
 template<typename T>
-class TypeTraits<QVector<T>> {
+class QH5Datatype::traits<QVector<T>> {
 public:
 
     static int metaTypeId(const QVector<T> &)
@@ -218,7 +302,7 @@ public:
 };
 
 template<>
-class TypeTraits<QString> {
+class QH5Datatype::traits<QString> {
 public:
 
     static int metaTypeId(const QString &)
@@ -229,7 +313,7 @@ public:
 };
 
 template<>
-class TypeTraits<QStringList> {
+class QH5Datatype::traits<QStringList> {
 public:
 
     static int metaTypeId(const QStringList &)
@@ -239,50 +323,7 @@ public:
     { return QVector<quint64>(1,value.size()); }
 };
 
-class QH5Datatype : public QH5id
-{
-    friend class QH5id;
-    friend class QH5Node;
-    friend class QH5Group;
-    friend class QH5Dataset;
-    QH5Datatype(h5id id, bool incref) : QH5id(id,incref) {}
-    static QH5Datatype fromMetaTypeId(int i);
-public:
-    enum Class {
-        UNSUPPORTED,
-        INTEGER,
-        FLOAT,
-        STRING
-    };
-
-    enum StringEncoding {
-        ASCII,
-        UTF8
-    };
-
-    QH5Datatype() : QH5id() {}
-    QH5Datatype(const QH5Datatype& g) : QH5id(g) {}
-    ~QH5Datatype() {}
-
-    template<typename T>
-    static QH5Datatype fromValue(const T& v)
-    {
-        return fromMetaTypeId(TypeTraits<T>::metaTypeId(v));
-    }
-
-    Class getClass() const;
-
-    int metaTypeId() const;
-
-    size_t size() const;
-    bool getStringTraits(StringEncoding& enc, size_t &size) const;
-    bool setStringTraits(StringEncoding enc, size_t size) const;
-
-    static QH5Datatype fixedString(int size);
-
-};
-
-class QH5Node : public QH5id
+class HDF_EXPORT QH5Node : public QH5id
 {
     friend class QH5id;
     friend class QH5Dataset;
@@ -290,7 +331,7 @@ class QH5Node : public QH5id
     QH5Node(h5id id, bool incref) : QH5id(id,incref) {}
 public:
     QH5Node() : QH5id() {}
-    QH5Node(const QH5Node& n) : QH5id(n) {}
+    //QH5Node(const QH5Node& n) : QH5id(n) {}
 
     bool hasAttribute(const char* name) const;
     QH5Datatype attributeType(const char* name) const;
@@ -299,14 +340,14 @@ public:
     bool readAttribute(const char* name, T& value) const {
         QH5Datatype datatype = QH5Datatype::fromValue(value);
 
-        return readAttribute_(name, TypeTraits<T>::ptr(value),
+        return readAttribute_(name, QH5Datatype::traits<T>::ptr(value),
                               QH5Datatype::fromValue(value));
     }
     template<typename T>
     bool writeAttribute(const char* name, const T& value) const {
         QH5Datatype datatype = QH5Datatype::fromValue(value);
 
-        return writeAttribute_(name, TypeTraits<T>::cptr(value),
+        return writeAttribute_(name, QH5Datatype::traits<T>::cptr(value),
                               QH5Datatype::fromValue(value));
     }
 private:
@@ -331,7 +372,7 @@ inline bool QH5Node::writeAttribute<QString>(const char* name, const QString& va
     return writeAttribute_(name, value);
 };
 
-class QH5Dataset : public QH5Node
+class HDF_EXPORT QH5Dataset : public QH5Node
 {
     friend class QH5id;
     friend class QH5Group;
@@ -339,8 +380,8 @@ class QH5Dataset : public QH5Node
 
 public:
     QH5Dataset() : QH5Node() {}
-    QH5Dataset(const QH5Dataset& g) : QH5Node(g) {}
-    ~QH5Dataset() {}
+    //QH5Dataset(const QH5Dataset& g) : QH5Node(g) {}
+    //~QH5Dataset() {}
 
     QH5Dataset& operator=(const QH5Dataset& o)
     { *((QH5id*)this) = o; return *this; }
@@ -352,15 +393,15 @@ public:
     bool write(const T& data) const
     {
         QH5Datatype datatype = QH5Datatype::fromValue(data);
-        return write_(TypeTraits<T>::cptr(data),
-                      TypeTraits<T>::dataspace(data),
+        return write_(QH5Datatype::traits<T>::cptr(data),
+                      QH5Datatype::traits<T>::dataspace(data),
                       datatype);
     }
     template<typename T>
     bool write(const T& data, const QH5Dataspace& memspace,
                const QH5Datatype& memtype) const
     {
-        return write_(TypeTraits<T>::cptr(data),
+        return write_(QH5Datatype::traits<T>::cptr(data),
                       memspace, memtype);
     }
     template<typename T>
@@ -368,8 +409,8 @@ public:
     {
         QH5Datatype datatype = QH5Datatype::fromValue(data);
         QH5Dataspace ds = dataspace();
-        TypeTraits<T>::resize(data,ds.size());
-        return read_(TypeTraits<T>::ptr(data),ds, datatype);
+        QH5Datatype::traits<T>::resize(data,ds.size());
+        return read_(QH5Datatype::traits<T>::ptr(data),ds, datatype);
     }
 
 private:
@@ -421,15 +462,15 @@ inline bool QH5Dataset::write<QStringList>(const QStringList& data, const QH5Dat
     return write_(data, memspace, memtype);
 };
 
-class QH5Group : public QH5Node
+class HDF_EXPORT QH5Group : public QH5Node
 {
     friend class QH5id;
     friend class QH5File;
     QH5Group(h5id id, bool incref) : QH5Node(id,incref) {}
 public:
     QH5Group() : QH5Node() {}
-    QH5Group(const QH5Group& g) : QH5Node(g) {}
-    ~QH5Group() {}
+    //QH5Group(const QH5Group& g) : QH5Node(g) {}
+    //~QH5Group() {}
 
     bool exists(const char *name) const;
     bool isDataset(const char *name) const;
@@ -449,7 +490,7 @@ public:
     {
         QH5Dataset ds;
         if (exists(name) && isDataset(name)) ds = openDataset(name);
-        else ds = createDataset(name, TypeTraits<T>::dataspace(data),
+        else ds = createDataset(name, QH5Datatype::traits<T>::dataspace(data),
                                       QH5Datatype::fromValue(data));
         return ds.isValid() ? ds.write(data) : false;
     }
@@ -471,7 +512,7 @@ private:
 
 };
 
-class QH5File
+class HDF_EXPORT QH5File
 {
     friend class QH5id;
 
