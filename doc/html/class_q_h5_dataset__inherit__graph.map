@@ -1,0 +1,5 @@
+<map id="QH5Dataset" name="QH5Dataset">
+<area shape="rect" id="node1" title="A wrapper for HDF5 datasets." alt="" coords="5,155,100,181"/>
+<area shape="rect" id="node2" href="$class_q_h5_node.html" title="Represents a node in a HDF5 file." alt="" coords="13,80,93,107"/>
+<area shape="rect" id="node3" href="$class_q_h5id.html" title="A wrapper for HDF5 object identifiers." alt="" coords="23,5,82,32"/>
+</map>
