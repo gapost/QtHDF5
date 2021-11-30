@@ -3,24 +3,6 @@
 #include <QImage>
 #include <QIcon>
 #include <QFileIconProvider>
-#include <QTextStream>
-
-template<typename T>
-QTextStream& operator<<(QTextStream& s, const QVector<T>& v)
-{
-    s << "( ";
-    for (int i=0; i<v.size()-1; i++) s << v[i] << ", ";
-    s << v[v.size()-1] << " )";
-    return s;
-}
-
-QTextStream& operator<<(QTextStream& s, const QStringList& v)
-{
-    s << "( ";
-    foreach(const QString& t, v) s << "\"" << t << "\", ";
-    s << " )";
-    return s;
-}
 
 class Node
 {
@@ -289,49 +271,3 @@ QH5Node QH5FileModel::h5node(const QModelIndex &index) const
     return nd->h5obj;
 }
 
-QString QH5FileModel::toString(const QModelIndex &index) const
-{
-    QString S;
-    QTextStream str(&S);
-
-    Node* nd = (Node*)index.internalPointer();
-    Q_ASSERT(nd);
-
-    if (nd->h5obj.isGroup()) {
-        str << nd->name << ": Group";
-    } else if (nd->h5obj.isDataset())
-    {
-        QH5Dataset ds = nd->h5obj.toDataset();
-        str << nd->name << ": Dataset" << endl;
-        QH5Datatype dt = ds.datatype();
-        QH5Datatype::Class cls = dt.getClass();
-        if (cls==QH5Datatype::FLOAT) {
-            QVector<double> v;
-            ds.read(v);
-            str << "Type: FLOAT" << endl;
-            str << "Size: " << v.size() << endl;
-            str << "Data: " << v;
-        } else if (cls==QH5Datatype::INTEGER) {
-            QVector<int> v;
-            ds.read(v);
-            str << "Type: INT" << endl;
-            str << "Size: " << v.size() << endl;
-            str << "Data: " << v;
-        } else if (cls==QH5Datatype::STRING) {
-            QStringList v;
-            ds.read(v);
-            str << "Type: STRING" << endl;
-            str << "Size: " << v.size() << endl;
-            str << "Data: " << v;
-        }
-        else {
-            str << "Type: Unknown" << endl;
-        }
-
-    }
-    else str << "Unknown Object";
-
-    str.flush();
-
-    return S;
-}

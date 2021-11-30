@@ -93,9 +93,7 @@ public:
 
     QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
 
-    QString toString(const QModelIndex &index) const;
-
-    /**
+     /**
      * @brief Returns the QH5Node associated with a model index.
      *
      * This function can be used in order to get the HDF5 node
