@@ -4,6 +4,7 @@ CONFIG -= qt
 
 DISTFILES += \
     ../README.md \
-    Doxyfile
+    Doxyfile \
+    qthdf5.dox
 
 

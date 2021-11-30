@@ -2,6 +2,16 @@
 
 #include <QDebug>
 
+/*! \example examples/demo/main.cpp
+ *
+ * This is a basic example of how to use QtHDF5.
+ *
+ * A HDF5 is created and some groups, attributes and datasets are written to it.
+ *
+ * Then the file is re-opened in read-only mode and the contents are listed.
+ *
+ */
+
 // list contents under group g
 void list(const QH5Group& g, int level = 0);
 
@@ -57,6 +67,8 @@ int main()
 
 void listAttributes(const QH5Node& n, int level)
 {
+    Q_UNUSED(level);
+
     foreach(const QByteArray& name, n.attributeNames()) {
         QH5Datatype dt = n.attributeType(name);
         QH5Datatype::Class cls = dt.getClass();

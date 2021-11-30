@@ -1,0 +1,22 @@
+/*! \mainpage
+ *
+ * \section intro Introduction
+ *
+ * QtHDF5 is a set of classes for accessing HDF5 files from Qt based code.
+ *
+ * It is similar to other C++ interfaces for HDF5 (e.g. <a href="https://github.com/ess-dmsc/h5cpp">ess-dmsc/h5cpp</a>)
+ * however it is easier to use from within a Qt project since it does not have any dependecies other than
+ * QtCore and the HDF5 C-API.
+ *
+ * The QMetaType system is utilized internally for handling the type conversions during reading/writing of HDF5 data.
+ *
+ * QtHDF5 can be used very efficiently when creating Qt UI for viewing/presenting HDF5 data.
+ * See the hdf5browser application in the <a href="examples.html">examples</a>. A screenshot is shown here:
+ *
+ * \image html qthdf5-file-browser.png
+ *
+ * \section download Download
+ *
+ * The code can be found on Github: <a href="https://github.com/gapost/qthdf5">https://github.com/gapost/qthdf5</a>
+ */
+

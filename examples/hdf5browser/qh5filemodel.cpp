@@ -27,10 +27,10 @@ class Node
 public:
     QList<Node*> children;
     QByteArray name;
-    QH5id h5obj;
+    QH5Node h5obj;
     Node *parent;
 
-    explicit Node(const QByteArray& n, const QH5id& obj, Node *parentItem = 0) :
+    explicit Node(const QByteArray& n, const QH5Node& obj, Node *parentItem = 0) :
         name(n),
         h5obj(obj),
         parent(parentItem)
@@ -109,6 +109,8 @@ void QH5FileModel::setFile(const QString& fname)
         rootNode = 0;
         hdf5file.close();
     }
+
+    if (fname.isNull() || fname.isEmpty()) return;
 
     hdf5file.setFileName(fname);
 
@@ -277,6 +279,14 @@ QVariant QH5FileModel::data(const QModelIndex &index, int role) const
     }
 
     return QVariant();
+}
+
+QH5Node QH5FileModel::h5node(const QModelIndex &index) const
+{
+    Node* nd = (Node*)index.internalPointer();
+    Q_ASSERT(nd);
+
+    return nd->h5obj;
 }
 
 QString QH5FileModel::toString(const QModelIndex &index) const

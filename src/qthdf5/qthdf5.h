@@ -214,6 +214,9 @@ public:
     static QH5Dataspace scalar();
 };
 
+/**
+ * @brief A wrapper for HDF5 datatypes
+ */
 class HDF_EXPORT QH5Datatype : public QH5id
 {
     friend class QH5id;
@@ -222,107 +225,158 @@ class HDF_EXPORT QH5Datatype : public QH5id
     friend class QH5Dataset;
 
     QH5Datatype(h5id id, bool incref) : QH5id(id,incref) {}
+
+    /*
+     * Create from a Qt metatype id
+     */
     static QH5Datatype fromMetaTypeId(int i);
 
+    // helper template class providing specific datatype properties
     template<typename T>
-    class traits {
-    public:
-
+    struct traits {
         static int metaTypeId(const T &) { return qMetaTypeId<T>(); }
-
-        static QH5Dataspace dataspace(const T &)
-        { return QVector<quint64>({1}); }
-
+        static QH5Dataspace dataspace(const T &){ return QVector<quint64>({1}); }
         static void resize(T &, int) {}
-
-        static void *ptr(T &value) {
-            return reinterpret_cast<void *>(&value);
-        }
-
-        static const void *cptr(const T &value) {
-            return reinterpret_cast<const void *>(&value);
-        }
+        static void *ptr(T &value) { return reinterpret_cast<void *>(&value); }
+        static const void *cptr(const T &value) { return reinterpret_cast<const void *>(&value); }
     };
 
 public:
+    /**
+     * @brief Enum type corresponding to H5T_class_t
+     */
     enum Class {
-        UNSUPPORTED,
-        INTEGER,
-        FLOAT,
-        STRING
+        UNSUPPORTED,    //!< invalid or unsupported type
+        INTEGER,        //!< integer type (H5T_INTEGER)
+        FLOAT,          //!< float type (H5T_FLOAT)
+        STRING          //!< string type (H5T_STRING)
     };
 
+    /**
+     * @brief Enum corresponding to H5T_cset_t
+     */
     enum StringEncoding {
-        ASCII,
-        UTF8
+        ASCII,      //!< ASCII / Latin-1 encoding
+        UTF8        //!< Unicode UTF8 encoding
     };
 
+    /**
+     * @brief Default constructor
+     * 
+     * Constructs an invalid QH5Datatype object
+     * 
+     */
     QH5Datatype() : QH5id() {}
-    //QH5Datatype(const QH5Datatype& g) : QH5id(g) {}
-    //~QH5Datatype() {}
 
+    /**
+     * @brief Construct a QH5Datatype object corresponding to v 's type
+     */
     template<typename T>
     static QH5Datatype fromValue(const T& v)
     {
         return fromMetaTypeId(traits<T>::metaTypeId(v));
     }
 
+    /**
+     * @brief Get the Class of this datatype
+     * 
+     * Calls H5Tget_class
+     */
     Class getClass() const;
 
+    /**
+     * @brief Get the Qt-metatype id corresponding to this datatype
+     * 
+     * If getClass() returns QH5Datatype::STRING then this function returns
+     * QMetaType::QString.
+     * 
+     * Otherwise it calls H5Tget_native_type to obtain the native type of the HDF5
+     * datatype and converts to an equivalent metatype id.  
+     * 
+     */
     int metaTypeId() const;
 
+    /**
+     * @brief Get the size of this datatype
+     * 
+     * Calls H5Tget_size
+     * 
+     * @return size_t 
+     */
     size_t size() const;
+
+    /**
+     * @brief Get the String properties of this datatype
+     * 
+     * Calls H5Tget_cset & H5Tis_variable_str to obtain the string properties.
+     * 
+     * @param enc String encoding
+     * @param size String size or size_t(-1) for variable (H5T_VARIABLE)
+     * @return true If succesfull
+     * @return false If the datatype is not string or an error occurred
+     */
     bool getStringTraits(StringEncoding& enc, size_t &size) const;
+
+    /**
+     * @brief Set the String properties of this datatype
+     * 
+     * Calls H5Tset_cset & H5Tset_size to set the string properties.
+     * 
+     * @param enc String encoding
+     * @param size String size or size_t(-1)  for variable (H5T_VARIABLE)
+     * @return true If succesfull
+     * @return false If the datatype is not string or an error occurred
+     */
     bool setStringTraits(StringEncoding enc, size_t size) const;
 
+    /**
+     * @brief Construct a fixed-size string HDF5 datatype
+     * 
+     * This is a helper function to create a fixed-size string datatype.
+     * 
+     * String datatypes are otherwise by default created as variable-sized (i.e. zero terminated) 
+     * 
+     */
     static QH5Datatype fixedString(int size);
 
 };
 
+// specialization for vectors
 template<typename T>
-class QH5Datatype::traits<QVector<T>> {
-public:
-
-    static int metaTypeId(const QVector<T> &)
-    { return qMetaTypeId<T>(); }
-
+struct QH5Datatype::traits<QVector<T>> {
+    static int metaTypeId(const QVector<T> &) { return qMetaTypeId<T>(); }
     static QH5Dataspace dataspace(const QVector<T> &value)
     { return QVector<quint64>(1,value.size()); }
-
-    static void resize(QVector<T> & v, int n)
-    { v.resize(n); }
-
-    static void *ptr(QVector<T> &data) {
-        return reinterpret_cast<void *>(data.data());
-    }
-
-    static const void *cptr(const QVector<T> &data) {
-        return reinterpret_cast<const void *>(data.constData());
-    }
+    static void resize(QVector<T> & v, int n) { v.resize(n); }
+    static void *ptr(QVector<T> &data) { return reinterpret_cast<void *>(data.data()); }
+    static const void *cptr(const QVector<T> &data)
+    { return reinterpret_cast<const void *>(data.constData()); }
 };
-
+// specialization for QString
 template<>
-class QH5Datatype::traits<QString> {
-public:
-
-    static int metaTypeId(const QString &)
-    { return qMetaTypeId<QString>(); }
-
+struct QH5Datatype::traits<QString> {
+    static int metaTypeId(const QString &) { return qMetaTypeId<QString>(); }
     static QH5Dataspace dataspace(const QString &)
     { return QVector<quint64>({1}); }
 };
-
+// specialization for QStringList
 template<>
-class QH5Datatype::traits<QStringList> {
-public:
-
+struct QH5Datatype::traits<QStringList> {
     static int metaTypeId(const QStringList &)
     { return qMetaTypeId<QString>(); }
-
     static QH5Dataspace dataspace(const QStringList & value)
     { return QVector<quint64>(1,value.size()); }
 };
 
+/**
+ * @brief Represents a node in a HDF5 file
+ * 
+ * A QH5Node can be either a HDF5 group or a HDF5 dataset.
+ * 
+ * QH5Node offers access to HDF5 attributes. Currently only single-valued 
+ * simple-type attributes are supported - no arrays or user-defined types
+ * 
+ */
 class HDF_EXPORT QH5Node : public QH5id
 {
     friend class QH5id;
@@ -330,12 +384,44 @@ class HDF_EXPORT QH5Node : public QH5id
     friend class QH5Group;
     QH5Node(h5id id, bool incref) : QH5id(id,incref) {}
 public:
+    /**
+     * @brief Default constructor
+     * 
+     * Constructs an invalid QH5Node object
+     * 
+     */
     QH5Node() : QH5id() {}
-    //QH5Node(const QH5Node& n) : QH5id(n) {}
 
+    /**
+     * @brief Check if an attribute excists
+     * 
+     * @param name Attribute name
+     * @return true If an attribute with this name excists
+     * @return false Otherwise
+     */
     bool hasAttribute(const char* name) const;
+    /**
+     * @brief Return the type of an attribute
+     * 
+     * @param name Name of the attribute
+     * @return QH5Datatype The attribute's type or an empty QH5Datatype
+     */
     QH5Datatype attributeType(const char* name) const;
+    /**
+     * @brief Get the names of all attributes
+     * 
+     * @return QByteArrayList 
+     */
     QByteArrayList attributeNames() const;
+    /**
+     * @brief Read the value of an attribute
+     * 
+     * @tparam T Type of the attribute
+     * @param name Attribute name
+     * @param value Attribute value
+     * @return true If succesfull
+     * @return false Otherwise
+     */
     template<typename T>
     bool readAttribute(const char* name, T& value) const {
         QH5Datatype datatype = QH5Datatype::fromValue(value);
@@ -343,6 +429,17 @@ public:
         return readAttribute_(name, QH5Datatype::traits<T>::ptr(value),
                               QH5Datatype::fromValue(value));
     }
+    /**
+     * @brief Write the value of an attribute
+     * 
+     * If the attribute does not exist it is created
+     * 
+     * @tparam T Type of the attribute
+     * @param name Attribute name
+     * @param value Attribute value
+     * @return true If succesfull
+     * @return false Otherwise
+     */
     template<typename T>
     bool writeAttribute(const char* name, const T& value) const {
         QH5Datatype datatype = QH5Datatype::fromValue(value);
@@ -372,6 +469,10 @@ inline bool QH5Node::writeAttribute<QString>(const char* name, const QString& va
     return writeAttribute_(name, value);
 };
 
+/**
+ * @brief A wrapper for HDF5 datasets
+ * 
+ */
 class HDF_EXPORT QH5Dataset : public QH5Node
 {
     friend class QH5id;
@@ -379,16 +480,36 @@ class HDF_EXPORT QH5Dataset : public QH5Node
     QH5Dataset(h5id id, bool incref) : QH5Node(id,incref) {}
 
 public:
+    /**
+     * @brief Default constructor
+     * 
+     * Creates an invalid QH5Dataset object
+     * 
+     */
     QH5Dataset() : QH5Node() {}
-    //QH5Dataset(const QH5Dataset& g) : QH5Node(g) {}
-    //~QH5Dataset() {}
 
     QH5Dataset& operator=(const QH5Dataset& o)
     { *((QH5id*)this) = o; return *this; }
 
+    /**
+     * @brief Return the associated datatype
+     */
     QH5Datatype datatype() const;
+
+    /**
+     * @brief Return the associated dataspace
+     */
     QH5Dataspace dataspace() const;
 
+    /**
+     * @brief Write data to this dataset
+     * 
+     * Datatype and dataspace are inferred from data. 
+     * 
+     * @tparam T Type of the data
+     * @param data data to write
+     * @return true if data was written, false otherwise
+     */
     template<typename T>
     bool write(const T& data) const
     {
@@ -397,6 +518,16 @@ public:
                       QH5Datatype::traits<T>::dataspace(data),
                       datatype);
     }
+
+    /**
+     * @brief Write data to this dataset
+     * 
+     * @tparam T Type of the data
+     * @param data data to write
+     * @param memspace memory dataspace
+     * @param memtype memory datatype
+     * @return true if data was written, false otherwise
+     */
     template<typename T>
     bool write(const T& data, const QH5Dataspace& memspace,
                const QH5Datatype& memtype) const
@@ -404,6 +535,17 @@ public:
         return write_(QH5Datatype::traits<T>::cptr(data),
                       memspace, memtype);
     }
+    /**
+     * @brief Write data to this dataset
+     * 
+     * The HDF5 datatype is inferred from type of the parameter data.
+     * The HDF5 dataspace is scalar if data is a single value or 
+     * a simple 1D dataspace is data is a QVector.
+     * 
+     * @tparam T Type of the data
+     * @param data data to write
+     * @return true if data was written, false otherwise
+     */
     template<typename T>
     bool read(T& data) const
     {
@@ -428,7 +570,7 @@ private:
     bool read_(QStringList& str) const;
 };
 
-
+// template specializations of read/write functions
 template<>
 inline bool QH5Dataset::read<QString>(QString& data) const
 {
@@ -462,29 +604,124 @@ inline bool QH5Dataset::write<QStringList>(const QStringList& data, const QH5Dat
     return write_(data, memspace, memtype);
 };
 
+/**
+ * @brief A wrapper for HDF5 groups
+ * 
+ */
 class HDF_EXPORT QH5Group : public QH5Node
 {
     friend class QH5id;
     friend class QH5File;
     QH5Group(h5id id, bool incref) : QH5Node(id,incref) {}
 public:
+    /**
+     * @brief Default constructor
+     * 
+     * Create an invalid QH5Group object
+     * 
+     */
     QH5Group() : QH5Node() {}
-    //QH5Group(const QH5Group& g) : QH5Node(g) {}
-    //~QH5Group() {}
 
+    /**
+     * @brief Check if a named link exists
+     * 
+     * Calls H5Lexists 
+     * 
+     * @param name name to check
+     * @return true If name exists
+     * @return false If this object is invalid or the name does not exists
+     */
     bool exists(const char *name) const;
+
+    /**
+     * @brief Check if a named object is a dataset
+     * 
+     * First the function exists() is called to check if the named object exists.
+     * Then the type of object is inferred by calling H5Oget_info_by_name
+     * 
+     * @param name name to check
+     * @return true If name exists and is a dataset
+     * @return false Otherwise
+     */
     bool isDataset(const char *name) const;
+
+    /**
+     * @brief Check if a named object is a dataset
+     * 
+     * First the function exists() is called to check if the named object exists.
+     * Then the type of object is inferred by calling H5Oget_info_by_name
+     *       
+     * @param name name to check
+     * @return true If name exists and is a dataset
+     * @return false Otherwise
+     */
     bool isGroup(const char *name) const;
 
+    /**
+     * @brief Create a sub-group  
+     * 
+     * A new group with a given name is created under the current group, unless an object with the same name
+     * exists or another error occurs.
+     * 
+     * If idxCreationOrder is set to true, then the creation order of items in the
+     * sub-group is registered and will be enumerable.
+     * 
+     * @param name Name of the new group
+     * @param idxCreationOrder Optional flag to register creation order
+     * @return QH5Group The new group or an invalid object
+     */
     QH5Group createGroup(const char *name, bool idxCreationOrder = false) const;
+
+    /**
+     * @brief Opens a sub-group 
+     * 
+     * The function checks if the name exists and if it is a group. Then it opens the group.
+     * 
+     * @param name Name of group to open
+     * @return QH5Group The group wrapper object. Invalid if unsuccesfull.
+     */
     QH5Group openGroup(const char *name) const;
+
+    /**
+     * @brief Returns true if creation order can be indexed in this group
+     */
     bool isCreationOrderIdx() const;
 
+    /**
+     * @brief Create a dataset object
+     * 
+     * @param name The name of the dataset
+     * @param dataspace The dataspace of the new dataset
+     * @param datatype The datatype of the new dataset
+     * @return QH5Dataset The dataset object. Invalid if the operation failed.
+     */
     QH5Dataset createDataset(const char *name,
-                             const QH5Dataspace& memspace,
+                             const QH5Dataspace& dataspace,
                              const QH5Datatype& datatype) const;
+
+    /**
+     * @brief Open a dataset
+     * 
+     * The function checks if the name exists and if it is a dataset. Then it opens the dataset. 
+     * 
+     * @param name The name of the dataset
+     * @return QH5Dataset The dataset object. Invalid if the operation failed.
+     */
     QH5Dataset openDataset(const char *name) const;
 
+    /**
+     * @brief Write data to a dataset
+     * 
+     * If the name corresponds to a dataset then it is opened otherwise a new dataset 
+     * with this name is created.
+     * 
+     * The data is written to the dataset.
+     * 
+     * @tparam T Type of the data to write
+     * @param name Name of the dataset
+     * @param data The data to write
+     * @return true If succesfull, false otherwise
+     */
     template<typename T>
     bool write(const char *name, const T& data) const
     {
@@ -494,6 +731,18 @@ public:
                                       QH5Datatype::fromValue(data));
         return ds.isValid() ? ds.write(data) : false;
     }
+
+    /**
+     * @brief Read data from a dataset
+     * 
+     * This function opens a dataset with the given name and reads
+     * the stored data.
+     * 
+     * @tparam T Type of the data to read
+     * @param name Name of the dataset
+     * @param data Variable to store the data
+     * @return true If succesfull, false otherwise
+     */
     template<typename T>
     bool read(const char *name, T& data) const
     {
@@ -501,10 +750,36 @@ public:
         return ds.isValid() ? ds.read(data) : false;
     }
 
+    /**
+     * @brief Get all sub-groups of this group
+     * 
+     * @param idxCreationOrder If true and the group was created with creation order enabled then 
+     *      the sub-groups are ordered according to creation time
+     * @return QVector<QH5Group> A vector of all sub-groups of this group
+     */
     QVector<QH5Group> subGroups(bool idxCreationOrder = false) const;
+
+    /**
+     * @brief Get all datasets in this group
+     * 
+     * @return QVector<QH5Dataset> A vector of all datasets
+     */
     QVector<QH5Dataset> datasets() const;
 
+    /**
+     * @brief Get the names of all sub-groups of this group
+     * 
+     * @param idxCreationOrder If true and the group was created with creation order enabled then 
+     *      the sub-group names are ordered according to creation time 
+     * @return QByteArrayList A list of sub-group names
+     */
     QByteArrayList groupNames(bool idxCreationOrder = false) const;
+
+    /**
+     * @brief Get the names of all datasets in this group
+     * 
+     * @return QByteArrayList A list of dataset names
+     */
     QByteArrayList datasetNames() const;
 
 private:
@@ -512,6 +787,10 @@ private:
 
 };
 
+/**
+ * @brief A wrapper class for HDF5 files 
+ * 
+ */
 class HDF_EXPORT QH5File
 {
     friend class QH5id;
@@ -520,22 +799,61 @@ class HDF_EXPORT QH5File
     QString error_msg_;
     QH5id id_;
 public:
-
+    /**
+     * @brief Construct a new QH5File object
+     * 
+     * @param fname The name of the HDF5 file
+     */
     QH5File (const QString& fname = QString()) : fname_(fname) {}
-    ~QH5File () {}
 
+    /**
+     * @brief Open the HDF5 file
+     * 
+     * If the file does not exist it is created.
+     * 
+     * If the file exists but mode is QIODevice::Truncate then it is opened and
+     * truncated.
+     * 
+     * An existing HDF5 file can be opened either with QIODevice::ReadWrite or with QIODevice::ReadOnly.
+     * 
+     * @param mode A combination of QIODevice flags
+     * @return true If the file has been succesfully opened or created
+     * @return false File does not exist or could not be created
+     */
     bool open(QIODevice::OpenMode mode = QIODevice::ReadWrite);
+
+    /**
+     * @brief Close the HDF5 file. Returns true if succesfull. 
+     */
     bool close() { return id_.close(); }
 
+    /**
+     * @brief Returns true if the file is open
+     */
     bool isOpen() const { return id_.isValid(); }
 
+    /**
+     * @brief Set the filename of this object
+     * 
+     * If the file is already open then fname is ignored
+     */
     void setFileName(const QString& fname)
     {
         if (!isOpen()) fname_ = fname;
     }
 
+    /**
+     * @brief Return the root group of the file
+     * 
+     * If the file is not open an invalid object is returned.
+     * 
+     * @return QH5Group The root group (named "/")
+     */
     QH5Group root() const;
 
+    /**
+     * @brief Check if the disk file fname is a valid HDF5 file
+     */
     static bool isHDF5(const QString& fname);
 
 private:
