@@ -7,11 +7,15 @@ SOURCES += \
 HEADERS +=  \
     $$PWD/qthdf5.h
 
-# Link with the hdf5 lib
-# LIBS += -lhdf5
 
-# this works in Ubuntu 20.04
-linux {
-    CONFIG += link_pkgconfig
-    PKGCONFIG += hdf5-serial
+unix {
+
+    UBUNTU = $$system(cat /proc/version | grep -o Ubuntu)
+
+    contains( UBUNTU, Ubuntu ) {
+        CONFIG += link_pkgconfig
+        PKGCONFIG += hdf5-serial
+    } else {
+        LIBS += -lhdf5
+    }
 }
