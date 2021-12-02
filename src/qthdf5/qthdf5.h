@@ -231,17 +231,64 @@ class HDF_EXPORT QH5Datatype : public QH5id
      */
     static QH5Datatype fromMetaTypeId(int i);
 
-    // helper template class providing specific datatype properties
+public:
+
+    /**
+     * @brief Helper struct to define specific type traits
+     * 
+     * The static funtions of traits are used by member function
+     * templates in QH5Datatype to facilitate type conversion
+     * from HDF5 to other datatypes.
+     * 
+     * QtHDF5 provides specializations of this template for
+     * QVector<T>, QString, QStringList.
+     * 
+     * Further specializations can be defined if needed. 
+     * 
+     * @tparam T 
+     */
     template<typename T>
     struct traits {
+        /**
+         * @brief Returns the Qt metatype id of the base type.
+         * 
+         * For container classes this function should return the id of
+         * the value type.
+         */
         static int metaTypeId(const T &) { return qMetaTypeId<T>(); }
+        /**
+         * @brief Return a HDF5 dataspace corresponding to the type size
+         * 
+         * The default implementation return a scalar dataspace corresponding
+         * to a single value.
+         * 
+         * For container classes a 1D simple dataspace should be returned
+         * with dimension equal to the size of the container
+         * 
+         */
         static QH5Dataspace dataspace(const T &){ return QVector<quint64>({1}); }
+        /**
+         * @brief Resize the datatype
+         * 
+         * This refers only to container types.
+         * 
+         * During read operations the container can be resized
+         * with this function so that
+         * HDF5 data can fit in.
+         * 
+         */
         static void resize(T &, int) {}
+        /**
+         * @brief Return a pointer to the actual data within the datatype
+         */
         static void *ptr(T &value) { return reinterpret_cast<void *>(&value); }
+        /**
+         * @brief Return a const pointer to the actual data within the datatype
+         */
         static const void *cptr(const T &value) { return reinterpret_cast<const void *>(&value); }
     };
 
-public:
+
     /**
      * @brief Enum type corresponding to H5T_class_t
      */
@@ -536,11 +583,10 @@ public:
                       memspace, memtype);
     }
     /**
-     * @brief Write data to this dataset
+     * @brief Read data from this dataset
      * 
-     * The HDF5 datatype is inferred from type of the parameter data.
-     * The HDF5 dataspace is scalar if data is a single value or 
-     * a simple 1D dataspace is data is a QVector.
+     * The HDF5 datatype is inferred from type of data.
+     * The function reads all data
      * 
      * @tparam T Type of the data
      * @param data data to write
