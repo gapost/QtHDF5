@@ -1,5 +1,5 @@
 var searchData=
 [
-  ['write_59',['write',['../class_q_h5_dataset.html#a400ef2044e9ef5eb894ddec236805dcb',1,'QH5Dataset::write(const T &amp;data) const'],['../class_q_h5_dataset.html#ab9b23359fce2255e84bc9ad22c39ea15',1,'QH5Dataset::write(const T &amp;data, const QH5Dataspace &amp;memspace, const QH5Datatype &amp;memtype) const'],['../class_q_h5_group.html#abed33bd133181498ef2a05d544a3231a',1,'QH5Group::write()']]],
-  ['writeattribute_60',['writeAttribute',['../class_q_h5_node.html#ae595e4b22fe1d42e3ecb9f04232620d0',1,'QH5Node']]]
+  ['unsupported_61',['UNSUPPORTED',['../class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53cacc573b8707388006254426df8d5aef25',1,'QH5Datatype']]],
+  ['utf8_62',['UTF8',['../class_q_h5_datatype.html#a4806646f239f2396e2f43bf9b8c0d116a0a14d4c20fb87b1657abb2929f6a7a7a',1,'QH5Datatype']]]
 ];

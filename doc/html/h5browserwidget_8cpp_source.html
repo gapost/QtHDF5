@@ -77,47 +77,126 @@ $(function() {
 <div class="line"><a name="l00004"></a><span class="lineno">    4</span>&#160;<span class="preprocessor">#include &quot;qh5filemodel.h&quot;</span></div>
 <div class="line"><a name="l00005"></a><span class="lineno">    5</span>&#160; </div>
 <div class="line"><a name="l00006"></a><span class="lineno">    6</span>&#160;<span class="preprocessor">#include &lt;QFileDialog&gt;</span></div>
-<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160; </div>
-<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160;H5BrowserWidget::H5BrowserWidget(QWidget *parent)</div>
-<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;    : QWidget(parent)</div>
-<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;    , ui(new Ui::H5BrowserWidget)</div>
+<div class="line"><a name="l00007"></a><span class="lineno">    7</span>&#160;<span class="preprocessor">#include &lt;QTextStream&gt;</span></div>
+<div class="line"><a name="l00008"></a><span class="lineno">    8</span>&#160; </div>
+<div class="line"><a name="l00009"></a><span class="lineno">    9</span>&#160;<span class="keyword">template</span>&lt;<span class="keyword">typename</span> T&gt;</div>
+<div class="line"><a name="l00010"></a><span class="lineno">   10</span>&#160;QTextStream&amp; operator&lt;&lt;(QTextStream&amp; s, <span class="keyword">const</span> QVector&lt;T&gt;&amp; v)</div>
 <div class="line"><a name="l00011"></a><span class="lineno">   11</span>&#160;{</div>
-<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    ui-&gt;setupUi(<span class="keyword">this</span>);</div>
-<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160; </div>
-<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;    model_ = <span class="keyword">new</span> <a class="code" href="class_q_h5_file_model.html">QH5FileModel</a>(<span class="keyword">this</span>);</div>
-<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160; </div>
-<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    connect(ui-&gt;btOpen, SIGNAL(pressed()), <span class="keyword">this</span>, SLOT(openPressed()));</div>
-<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;    connect(ui-&gt;treeView, &amp;QTreeView::clicked, <span class="keyword">this</span>, &amp;H5BrowserWidget::on_treeView_activated);</div>
+<div class="line"><a name="l00012"></a><span class="lineno">   12</span>&#160;    <span class="keywordflow">if</span> (v.size()&gt;1) {</div>
+<div class="line"><a name="l00013"></a><span class="lineno">   13</span>&#160;        s &lt;&lt; <span class="stringliteral">&quot;( &quot;</span>;</div>
+<div class="line"><a name="l00014"></a><span class="lineno">   14</span>&#160;        <span class="keywordflow">for</span> (<span class="keywordtype">int</span> i=0; i&lt;v.size()-1; i++) s &lt;&lt; v[i] &lt;&lt; <span class="stringliteral">&quot;, &quot;</span>;</div>
+<div class="line"><a name="l00015"></a><span class="lineno">   15</span>&#160;        s &lt;&lt; v[v.size()-1] &lt;&lt; <span class="stringliteral">&quot; )&quot;</span>;</div>
+<div class="line"><a name="l00016"></a><span class="lineno">   16</span>&#160;    } <span class="keywordflow">else</span> s &lt;&lt; v[0];</div>
+<div class="line"><a name="l00017"></a><span class="lineno">   17</span>&#160;    <span class="keywordflow">return</span> s;</div>
 <div class="line"><a name="l00018"></a><span class="lineno">   18</span>&#160;}</div>
 <div class="line"><a name="l00019"></a><span class="lineno">   19</span>&#160; </div>
-<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;H5BrowserWidget::~H5BrowserWidget()</div>
+<div class="line"><a name="l00020"></a><span class="lineno">   20</span>&#160;QTextStream&amp; operator&lt;&lt;(QTextStream&amp; s, <span class="keyword">const</span> QStringList&amp; v)</div>
 <div class="line"><a name="l00021"></a><span class="lineno">   21</span>&#160;{</div>
-<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;    <span class="keyword">delete</span> ui;</div>
-<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;}</div>
-<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160; </div>
-<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;<span class="keywordtype">void</span> H5BrowserWidget::openPressed()</div>
-<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;{</div>
-<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;    QString fname = QFileDialog::getOpenFileName(<span class="keyword">this</span>,</div>
-<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;                                                 <span class="stringliteral">&quot;Select HDF5 file&quot;</span>);</div>
+<div class="line"><a name="l00022"></a><span class="lineno">   22</span>&#160;    <span class="keywordflow">if</span> (v.size()&gt;1) {</div>
+<div class="line"><a name="l00023"></a><span class="lineno">   23</span>&#160;        s &lt;&lt; <span class="stringliteral">&quot;( &quot;</span>;</div>
+<div class="line"><a name="l00024"></a><span class="lineno">   24</span>&#160;        <span class="keywordflow">foreach</span>(<span class="keyword">const</span> QString&amp; t, v) s &lt;&lt; <span class="stringliteral">&quot;\&quot;&quot;</span> &lt;&lt; t &lt;&lt; <span class="stringliteral">&quot;\&quot;, &quot;</span>;</div>
+<div class="line"><a name="l00025"></a><span class="lineno">   25</span>&#160;        s &lt;&lt; <span class="stringliteral">&quot; )&quot;</span>;</div>
+<div class="line"><a name="l00026"></a><span class="lineno">   26</span>&#160;    } <span class="keywordflow">else</span> s &lt;&lt; v[0];</div>
+<div class="line"><a name="l00027"></a><span class="lineno">   27</span>&#160;    <span class="keywordflow">return</span> s;</div>
+<div class="line"><a name="l00028"></a><span class="lineno">   28</span>&#160;}</div>
 <div class="line"><a name="l00029"></a><span class="lineno">   29</span>&#160; </div>
-<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;    <span class="keywordflow">if</span> (!fname.isEmpty() &amp;&amp; <a class="code" href="class_q_h5_file.html#a62212365069aeb7e3787ab77a4d37055">QH5File::isHDF5</a>(fname)) {</div>
-<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;        ui-&gt;treeView-&gt;setModel(0);</div>
-<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;        model_ -&gt;setFile(fname);</div>
-<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;        ui-&gt;treeView-&gt;setModel(model_);</div>
-<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;        ui-&gt;edtFileName-&gt;setText(fname);</div>
-<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160;    }</div>
-<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160; </div>
-<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160;}</div>
-<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160; </div>
-<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160; </div>
-<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;<span class="keywordtype">void</span> H5BrowserWidget::on_treeView_activated(<span class="keyword">const</span> QModelIndex &amp;index)</div>
-<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;{</div>
-<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;    ui-&gt;edtField-&gt;setPlainText(model_-&gt;toString(index));</div>
-<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160; </div>
-<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;}</div>
+<div class="line"><a name="l00030"></a><span class="lineno">   30</span>&#160;H5BrowserWidget::H5BrowserWidget(QWidget *parent)</div>
+<div class="line"><a name="l00031"></a><span class="lineno">   31</span>&#160;    : QWidget(parent)</div>
+<div class="line"><a name="l00032"></a><span class="lineno">   32</span>&#160;    , ui(new Ui::H5BrowserWidget)</div>
+<div class="line"><a name="l00033"></a><span class="lineno">   33</span>&#160;{</div>
+<div class="line"><a name="l00034"></a><span class="lineno">   34</span>&#160;    ui-&gt;setupUi(<span class="keyword">this</span>);</div>
+<div class="line"><a name="l00035"></a><span class="lineno">   35</span>&#160; </div>
+<div class="line"><a name="l00036"></a><span class="lineno">   36</span>&#160;    model_ = <span class="keyword">new</span> <a class="code" href="class_q_h5_file_model.html">QH5FileModel</a>(<span class="keyword">this</span>);</div>
+<div class="line"><a name="l00037"></a><span class="lineno">   37</span>&#160; </div>
+<div class="line"><a name="l00038"></a><span class="lineno">   38</span>&#160;    connect(ui-&gt;btOpen, SIGNAL(pressed()), <span class="keyword">this</span>, SLOT(openPressed()));</div>
+<div class="line"><a name="l00039"></a><span class="lineno">   39</span>&#160;    connect(ui-&gt;treeView, &amp;QTreeView::clicked, <span class="keyword">this</span>, &amp;H5BrowserWidget::on_treeView_activated);</div>
+<div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160;}</div>
+<div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160; </div>
+<div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;H5BrowserWidget::~H5BrowserWidget()</div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;{</div>
+<div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;    <span class="keyword">delete</span> ui;</div>
+<div class="line"><a name="l00045"></a><span class="lineno">   45</span>&#160;}</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160; </div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;<span class="keywordtype">void</span> H5BrowserWidget::openPressed()</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;{</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    QString fname = QFileDialog::getOpenFileName(<span class="keyword">this</span>,</div>
+<div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;                                                 <span class="stringliteral">&quot;Select HDF5 file&quot;</span>);</div>
+<div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160; </div>
+<div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;    <span class="keywordflow">if</span> (!fname.isEmpty() &amp;&amp; <a class="code" href="class_q_h5_file.html#a62212365069aeb7e3787ab77a4d37055">QH5File::isHDF5</a>(fname)) {</div>
+<div class="line"><a name="l00053"></a><span class="lineno">   53</span>&#160;        ui-&gt;treeView-&gt;setModel(0);</div>
+<div class="line"><a name="l00054"></a><span class="lineno">   54</span>&#160;        model_ -&gt;setFile(fname);</div>
+<div class="line"><a name="l00055"></a><span class="lineno">   55</span>&#160;        ui-&gt;treeView-&gt;setModel(model_);</div>
+<div class="line"><a name="l00056"></a><span class="lineno">   56</span>&#160;        ui-&gt;edtFileName-&gt;setText(fname);</div>
+<div class="line"><a name="l00057"></a><span class="lineno">   57</span>&#160;    }</div>
+<div class="line"><a name="l00058"></a><span class="lineno">   58</span>&#160; </div>
+<div class="line"><a name="l00059"></a><span class="lineno">   59</span>&#160;}</div>
+<div class="line"><a name="l00060"></a><span class="lineno">   60</span>&#160; </div>
+<div class="line"><a name="l00061"></a><span class="lineno">   61</span>&#160; </div>
+<div class="line"><a name="l00062"></a><span class="lineno">   62</span>&#160;<span class="keywordtype">void</span> H5BrowserWidget::on_treeView_activated(<span class="keyword">const</span> QModelIndex &amp;index)</div>
+<div class="line"><a name="l00063"></a><span class="lineno">   63</span>&#160;{</div>
+<div class="line"><a name="l00064"></a><span class="lineno">   64</span>&#160;    QString S;</div>
+<div class="line"><a name="l00065"></a><span class="lineno">   65</span>&#160;    QTextStream str(&amp;S);</div>
+<div class="line"><a name="l00066"></a><span class="lineno">   66</span>&#160;    <a class="code" href="class_q_h5_node.html">QH5Node</a> node = model_-&gt;h5node(index);</div>
+<div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160; </div>
+<div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160; </div>
+<div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;    <span class="keywordflow">if</span> (node.<a class="code" href="class_q_h5id.html#acb8ad8821c4aca8928609bea4b242a55">isGroup</a>()) {</div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;        str &lt;&lt; node.<a class="code" href="class_q_h5id.html#ac25f3133f1489a256c614fc75aaedd11">name</a>() &lt;&lt; <span class="stringliteral">&quot;: Group&quot;</span>;</div>
+<div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;    } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (node.<a class="code" href="class_q_h5id.html#a34d8f8d44706332aeae38384944a5bbb">isDataset</a>())</div>
+<div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;    {</div>
+<div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;        <a class="code" href="class_q_h5_dataset.html">QH5Dataset</a> ds = node.<a class="code" href="class_q_h5id.html#abd3ee1f81c85e9d91caa40339245b0a4">toDataset</a>();</div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;        str &lt;&lt; node.<a class="code" href="class_q_h5id.html#ac25f3133f1489a256c614fc75aaedd11">name</a>() &lt;&lt; <span class="stringliteral">&quot;: Dataset&quot;</span> &lt;&lt; endl;</div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;        <a class="code" href="class_q_h5_datatype.html">QH5Datatype</a> dt = ds.<a class="code" href="class_q_h5_dataset.html#a11535535b784dedd89604577917b1ace">datatype</a>();</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;        <a class="code" href="class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53c">QH5Datatype::Class</a> cls = dt.<a class="code" href="class_q_h5_datatype.html#a39e654b2db2356b933692f46d018cffd">getClass</a>();</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;        <span class="keywordflow">if</span> (cls==<a class="code" href="class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53cafe84fbdfcbf9ef3ef513dd5c9c9bbdf0">QH5Datatype::FLOAT</a>) {</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;            QVector&lt;double&gt; v;</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;            ds.<a class="code" href="class_q_h5_dataset.html#a8172f293cfe99bf4af17946f5465fbf8">read</a>(v);</div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Type: FLOAT&quot;</span> &lt;&lt; endl;</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Size: &quot;</span> &lt;&lt; v.size() &lt;&lt; endl;</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Data: &quot;</span> &lt;&lt; v;</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cls==<a class="code" href="class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53ca0079d2096a19850cd4f6ca0282774dee">QH5Datatype::INTEGER</a>) {</div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;            QVector&lt;int&gt; v;</div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;            ds.<a class="code" href="class_q_h5_dataset.html#a8172f293cfe99bf4af17946f5465fbf8">read</a>(v);</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Type: INT&quot;</span> &lt;&lt; endl;</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Size: &quot;</span> &lt;&lt; v.size() &lt;&lt; endl;</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Data: &quot;</span> &lt;&lt; v;</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;        } <span class="keywordflow">else</span> <span class="keywordflow">if</span> (cls==<a class="code" href="class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53cad2fbff352bc592f2a43aa33885c3a17e">QH5Datatype::STRING</a>) {</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;            QStringList v;</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;            ds.<a class="code" href="class_q_h5_dataset.html#a8172f293cfe99bf4af17946f5465fbf8">read</a>(v);</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Type: STRING&quot;</span> &lt;&lt; endl;</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Size: &quot;</span> &lt;&lt; v.size() &lt;&lt; endl;</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Data: &quot;</span> &lt;&lt; v;</div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160;        }</div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;        <span class="keywordflow">else</span> {</div>
+<div class="line"><a name="l00097"></a><span class="lineno">   97</span>&#160;            str &lt;&lt; <span class="stringliteral">&quot;Type: Unknown&quot;</span> &lt;&lt; endl;</div>
+<div class="line"><a name="l00098"></a><span class="lineno">   98</span>&#160;        }</div>
+<div class="line"><a name="l00099"></a><span class="lineno">   99</span>&#160; </div>
+<div class="line"><a name="l00100"></a><span class="lineno">  100</span>&#160;    }</div>
+<div class="line"><a name="l00101"></a><span class="lineno">  101</span>&#160;    <span class="keywordflow">else</span> str &lt;&lt; <span class="stringliteral">&quot;Unknown Object&quot;</span>;</div>
+<div class="line"><a name="l00102"></a><span class="lineno">  102</span>&#160; </div>
+<div class="line"><a name="l00103"></a><span class="lineno">  103</span>&#160;    str.flush();</div>
+<div class="line"><a name="l00104"></a><span class="lineno">  104</span>&#160; </div>
+<div class="line"><a name="l00105"></a><span class="lineno">  105</span>&#160;    ui-&gt;edtField-&gt;setPlainText(S);</div>
+<div class="line"><a name="l00106"></a><span class="lineno">  106</span>&#160; </div>
+<div class="line"><a name="l00107"></a><span class="lineno">  107</span>&#160; </div>
+<div class="line"><a name="l00108"></a><span class="lineno">  108</span>&#160; </div>
+<div class="line"><a name="l00109"></a><span class="lineno">  109</span>&#160;}</div>
 </div><!-- fragment --></div><!-- contents -->
+<div class="ttc" id="aclass_q_h5id_html_abd3ee1f81c85e9d91caa40339245b0a4"><div class="ttname"><a href="class_q_h5id.html#abd3ee1f81c85e9d91caa40339245b0a4">QH5id::toDataset</a></div><div class="ttdeci">QH5Dataset toDataset() const</div><div class="ttdoc">Promote to QH5Dataset.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8cpp_source.html#l00116">qthdf5.cpp:116</a></div></div>
+<div class="ttc" id="aclass_q_h5id_html_acb8ad8821c4aca8928609bea4b242a55"><div class="ttname"><a href="class_q_h5id.html#acb8ad8821c4aca8928609bea4b242a55">QH5id::isGroup</a></div><div class="ttdeci">bool isGroup() const</div><div class="ttdoc">Return true if the id refers to a HDF5 group.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8cpp_source.html#l00104">qthdf5.cpp:104</a></div></div>
+<div class="ttc" id="aclass_q_h5_node_html"><div class="ttname"><a href="class_q_h5_node.html">QH5Node</a></div><div class="ttdoc">Represents a node in a HDF5 file.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8h_source.html#l00427">qthdf5.h:427</a></div></div>
+<div class="ttc" id="aclass_q_h5id_html_ac25f3133f1489a256c614fc75aaedd11"><div class="ttname"><a href="class_q_h5id.html#ac25f3133f1489a256c614fc75aaedd11">QH5id::name</a></div><div class="ttdeci">QByteArray name() const</div><div class="ttdoc">Return the name of the corresponding id.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8cpp_source.html#l00095">qthdf5.cpp:95</a></div></div>
+<div class="ttc" id="aclass_q_h5_datatype_html_a39e654b2db2356b933692f46d018cffd"><div class="ttname"><a href="class_q_h5_datatype.html#a39e654b2db2356b933692f46d018cffd">QH5Datatype::getClass</a></div><div class="ttdeci">Class getClass() const</div><div class="ttdoc">Get the Class of this datatype.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8cpp_source.html#l00255">qthdf5.cpp:255</a></div></div>
+<div class="ttc" id="aclass_q_h5_dataset_html_a11535535b784dedd89604577917b1ace"><div class="ttname"><a href="class_q_h5_dataset.html#a11535535b784dedd89604577917b1ace">QH5Dataset::datatype</a></div><div class="ttdeci">QH5Datatype datatype() const</div><div class="ttdoc">Return the associated datatype.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8cpp_source.html#l00594">qthdf5.cpp:594</a></div></div>
+<div class="ttc" id="aclass_q_h5_datatype_html_a1aa0081c6fcb815429c2b60c9872c53c"><div class="ttname"><a href="class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53c">QH5Datatype::Class</a></div><div class="ttdeci">Class</div><div class="ttdoc">Enum type corresponding to H5T_class_t.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8h_source.html#l00295">qthdf5.h:295</a></div></div>
+<div class="ttc" id="aclass_q_h5_dataset_html_a8172f293cfe99bf4af17946f5465fbf8"><div class="ttname"><a href="class_q_h5_dataset.html#a8172f293cfe99bf4af17946f5465fbf8">QH5Dataset::read</a></div><div class="ttdeci">bool read(T &amp;data) const</div><div class="ttdoc">Read data from this dataset.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8h_source.html#l00596">qthdf5.h:596</a></div></div>
+<div class="ttc" id="aclass_q_h5_datatype_html_a1aa0081c6fcb815429c2b60c9872c53ca0079d2096a19850cd4f6ca0282774dee"><div class="ttname"><a href="class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53ca0079d2096a19850cd4f6ca0282774dee">QH5Datatype::INTEGER</a></div><div class="ttdeci">@ INTEGER</div><div class="ttdoc">integer type (H5T_INTEGER)</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8h_source.html#l00297">qthdf5.h:297</a></div></div>
+<div class="ttc" id="aclass_q_h5_dataset_html"><div class="ttname"><a href="class_q_h5_dataset.html">QH5Dataset</a></div><div class="ttdoc">A wrapper for HDF5 datasets.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8h_source.html#l00523">qthdf5.h:523</a></div></div>
 <div class="ttc" id="aclass_q_h5_file_html_a62212365069aeb7e3787ab77a4d37055"><div class="ttname"><a href="class_q_h5_file.html#a62212365069aeb7e3787ab77a4d37055">QH5File::isHDF5</a></div><div class="ttdeci">static bool isHDF5(const QString &amp;fname)</div><div class="ttdoc">Check if the disk file fname is a valid HDF5 file.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8cpp_source.html#l00607">qthdf5.cpp:607</a></div></div>
+<div class="ttc" id="aclass_q_h5_datatype_html"><div class="ttname"><a href="class_q_h5_datatype.html">QH5Datatype</a></div><div class="ttdoc">A wrapper for HDF5 datatypes.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8h_source.html#l00220">qthdf5.h:220</a></div></div>
 <div class="ttc" id="aclass_q_h5_file_model_html"><div class="ttname"><a href="class_q_h5_file_model.html">QH5FileModel</a></div><div class="ttdoc">Defines a Qt item model for HDF5 files.</div><div class="ttdef"><b>Definition:</b> <a href="qh5filemodel_8h_source.html#l00048">qh5filemodel.h:48</a></div></div>
+<div class="ttc" id="aclass_q_h5_datatype_html_a1aa0081c6fcb815429c2b60c9872c53cad2fbff352bc592f2a43aa33885c3a17e"><div class="ttname"><a href="class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53cad2fbff352bc592f2a43aa33885c3a17e">QH5Datatype::STRING</a></div><div class="ttdeci">@ STRING</div><div class="ttdoc">string type (H5T_STRING)</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8h_source.html#l00299">qthdf5.h:299</a></div></div>
+<div class="ttc" id="aclass_q_h5id_html_a34d8f8d44706332aeae38384944a5bbb"><div class="ttname"><a href="class_q_h5id.html#a34d8f8d44706332aeae38384944a5bbb">QH5id::isDataset</a></div><div class="ttdeci">bool isDataset() const</div><div class="ttdoc">Return true if the id refers to a HDF5 dataset.</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8cpp_source.html#l00108">qthdf5.cpp:108</a></div></div>
+<div class="ttc" id="aclass_q_h5_datatype_html_a1aa0081c6fcb815429c2b60c9872c53cafe84fbdfcbf9ef3ef513dd5c9c9bbdf0"><div class="ttname"><a href="class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53cafe84fbdfcbf9ef3ef513dd5c9c9bbdf0">QH5Datatype::FLOAT</a></div><div class="ttdeci">@ FLOAT</div><div class="ttdoc">float type (H5T_FLOAT)</div><div class="ttdef"><b>Definition:</b> <a href="qthdf5_8h_source.html#l00298">qthdf5.h:298</a></div></div>
 <!-- start footer part -->
 <hr class="footer"/><address class="footer"><small>
 Generated by &#160;<a href="http://www.doxygen.org/index.html">

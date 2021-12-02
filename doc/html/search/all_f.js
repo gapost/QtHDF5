@@ -1,5 +1,6 @@
 var searchData=
 [
-  ['unsupported_57',['UNSUPPORTED',['../class_q_h5_datatype.html#a1aa0081c6fcb815429c2b60c9872c53cacc573b8707388006254426df8d5aef25',1,'QH5Datatype']]],
-  ['utf8_58',['UTF8',['../class_q_h5_datatype.html#a4806646f239f2396e2f43bf9b8c0d116a0a14d4c20fb87b1657abb2929f6a7a7a',1,'QH5Datatype']]]
+  ['todataset_58',['toDataset',['../class_q_h5id.html#abd3ee1f81c85e9d91caa40339245b0a4',1,'QH5id']]],
+  ['togroup_59',['toGroup',['../class_q_h5id.html#a37dcca7ab92fd3682f009480fb84f3d2',1,'QH5id']]],
+  ['traits_60',['traits',['../struct_q_h5_datatype_1_1traits.html',1,'QH5Datatype']]]
 ];
