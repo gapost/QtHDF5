@@ -1,5 +1,7 @@
 # QtHDF5
 
+> part of **QDaq** (https://gitlab.com/qdaq/qdaq) - Qt-based Data Acquisition
+
 QtHDF5 is a set of classes for accessing HDF5 files from Qt based code.
 
 It is similar to other C++ interfaces for HDF5 (e.g. <a href="https://github.com/ess-dmsc/h5cpp">ess-dmsc/h5cpp</a>)
